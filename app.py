@@ -8,6 +8,7 @@ def load_data():
     data['REVENUES'] = pd.to_numeric(data['REVENUES'], errors='coerce')
     return data
 
+# Load and cache the data
 data = load_data()
 
 # Title and description
@@ -19,11 +20,13 @@ This interactive app visualizes the geographic distribution of Fortune 500 compa
 # Data Overview
 st.header("Data Overview")
 st.markdown("A snapshot of the cleaned dataset.")
-st.write(data.head())
+st.dataframe(data.head())  # Changed to `st.dataframe` for better interactivity
 
 # Interactive Map
 st.header("Geographic Distribution of Headquarters")
 st.markdown("Explore the locations of Fortune 500 headquarters across the USA.")
+
+# Pydeck view state
 view_state = pdk.ViewState(
     latitude=data['LATITUDE'].mean(),
     longitude=data['LONGITUDE'].mean(),
@@ -31,19 +34,28 @@ view_state = pdk.ViewState(
     pitch=0
 )
 
+# Pydeck scatterplot layer
 layer = pdk.Layer(
     'ScatterplotLayer',
     data=data,
     get_position='[LONGITUDE, LATITUDE]',
-    get_radius=50000,
-    get_color=[0, 128, 255],
+    get_radius=50000,  # Radius in meters
+    get_color=[0, 128, 255],  # Blue color
     pickable=True
 )
 
-tool_tip = {"html": "Company: {NAME}<br>State: {STATE}<br>Revenue: ${REVENUES}M",
-            "style": {"backgroundColor": "steelblue", "color": "white"}}
+# Tooltip for the map
+tool_tip = {
+    "html": "<b>Company:</b> {NAME}<br><b>State:</b> {STATE}<br><b>Revenue:</b> ${REVENUES}M",
+    "style": {"backgroundColor": "steelblue", "color": "white"}
+}
 
-map = pdk.Deck(layers=[layer], initial_view_state=view_state, tooltip=tool_tip)
+# Pydeck map rendering
+map = pdk.Deck(
+    layers=[layer],
+    initial_view_state=view_state,
+    tooltip=tool_tip
+)
 st.pydeck_chart(map)
 
 # Revenue Analysis
@@ -56,15 +68,16 @@ st.bar_chart(revenue_by_state)
 st.header("Top Companies by Revenue")
 st.markdown("A list of the top 10 companies by revenue.")
 top_revenue = data.nlargest(10, 'REVENUES')[['NAME', 'REVENUES', 'STATE']]
-st.write(top_revenue)
+st.dataframe(top_revenue)  # Changed to `st.dataframe` for better formatting
 
 # Filtering by State
 st.header("Filter by State")
-states = st.multiselect("Select states to filter", data['STATE'].unique())
+states = st.multiselect("Select states to filter", options=data['STATE'].unique(), default=[])
 filtered_data = data[data['STATE'].isin(states)] if states else data
-st.write(filtered_data)
+st.markdown("Filtered Data:")
+st.dataframe(filtered_data)
 
-# Customized Analysis
+# Customized Insights Section
 st.header("Marketing Insights")
 st.markdown("""
 **Key Insights:**
