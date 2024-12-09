@@ -1,14 +1,3 @@
-"""
-Name:       Your Name
-CS230:      Section XXX
-Data:       Fortune 500 Corporate Headquarters
-URL:        Add your Streamlit Cloud link here
-
-Description:    
-This program creates an interactive data explorer using the Fortune 500 dataset.
-It allows users to filter data, visualize distributions, and view corporate headquarters on a map.
-"""
-
 import pandas as pd
 import streamlit as st
 import pydeck as pdk
@@ -27,7 +16,7 @@ def load_data(filepath):
 # Data Cleaning
 def clean_data(df):
     df = df.dropna()  # Drop rows with missing values
-    df = df.rename(columns=lambda x: x.strip())  # Remove extra spaces
+    df.columns = df.columns.str.strip()  # Strip spaces
     return df
 
 # Visualization Functions
@@ -52,8 +41,8 @@ def create_map(df):
     st.pydeck_chart(pdk.Deck(
         map_style='mapbox://styles/mapbox/light-v9',
         initial_view_state=pdk.ViewState(
-            latitude=df['latitude'].mean(),
-            longitude=df['longitude'].mean(),
+            latitude=df['LATITUDE'].mean(),
+            longitude=df['LONGITUDE'].mean(),
             zoom=4,
             pitch=50,
         ),
@@ -61,7 +50,7 @@ def create_map(df):
             pdk.Layer(
                 'ScatterplotLayer',
                 data=df,
-                get_position='[longitude, latitude]',
+                get_position='[LONGITUDE, LATITUDE]',
                 get_color='[200, 30, 0, 160]',
                 get_radius=10000,
             ),
@@ -75,18 +64,20 @@ st.sidebar.title("Filters")
 # Load and Clean Data
 data_file = "Fortune 500 Corporate Headquarters.csv"
 df = load_data(data_file)
-df = clean_data(df)
 
 if not df.empty:
+    df = clean_data(df)
+    st.write("Columns in DataFrame:", df.columns)  # Debugging step
+
     # Sidebar Filters
-    states = st.sidebar.multiselect("Select States", df['state'].unique())
-    industries = st.sidebar.multiselect("Select Industries", df['industry'].unique())
+    states = st.sidebar.multiselect("Select States", df['STATE'].unique())
+    industries = st.sidebar.multiselect("Select Industries", df['NAME'].unique())
     
     # Filter Data
     if states:
-        df = df[df['state'].isin(states)]
+        df = df[df['STATE'].isin(states)]
     if industries:
-        df = df[df['industry'].isin(industries)]
+        df = df[df['NAME'].isin(industries)]
 
     # Display Data
     st.write("Filtered Data", df)
@@ -96,10 +87,10 @@ if not df.empty:
     chart_type = st.selectbox("Choose Chart Type", ["Bar Chart", "Pie Chart", "Map"])
     
     if chart_type == "Bar Chart":
-        column = st.selectbox("Choose Column for Bar Chart", ["state", "industry"])
+        column = st.selectbox("Choose Column for Bar Chart", ["STATE", "COUNTY"])
         bar_chart(df, column)
     elif chart_type == "Pie Chart":
-        column = st.selectbox("Choose Column for Pie Chart", ["state", "industry"])
+        column = st.selectbox("Choose Column for Pie Chart", ["STATE", "COUNTY"])
         pie_chart(df, column)
     elif chart_type == "Map":
         create_map(df)
