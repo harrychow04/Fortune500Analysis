@@ -1,15 +1,25 @@
-# Load the data
+# Define function to load data
 @st.cache_data
-def load_data():
-    file_path = 'Fortune 500 Corporate Headquarters.csv'
+def load_data(file_path):
+    # Check if file exists
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"File not found: {file_path}")
+    # Load data
     data = pd.read_csv(file_path)
     # Clean data
     data = data.dropna(subset=['LATITUDE', 'LONGITUDE', 'NAME', 'STATE', 'REVENUES'])
     data['REVENUES'] = pd.to_numeric(data['REVENUES'], errors='coerce')
     return data
 
-# Load and cache the data
-data = load_data()
+# Path to the data file
+FILE_PATH = 'Fortune 500 Corporate Headquarters.csv'
+
+# Load data
+try:
+    data = load_data(FILE_PATH)
+except FileNotFoundError as e:
+    st.error(str(e))
+    st.stop()
 
 # Title and description
 st.title("Fortune 500 Corporate Headquarters Analysis")
@@ -20,13 +30,12 @@ This interactive app visualizes the geographic distribution of Fortune 500 compa
 # Data Overview
 st.header("Data Overview")
 st.markdown("A snapshot of the cleaned dataset.")
-st.dataframe(data.head())  # Changed to `st.dataframe` for better interactivity
+st.dataframe(data.head())
 
 # Interactive Map
 st.header("Geographic Distribution of Headquarters")
 st.markdown("Explore the locations of Fortune 500 headquarters across the USA.")
 
-# Pydeck view state
 view_state = pdk.ViewState(
     latitude=data['LATITUDE'].mean(),
     longitude=data['LONGITUDE'].mean(),
@@ -34,28 +43,21 @@ view_state = pdk.ViewState(
     pitch=0
 )
 
-# Pydeck scatterplot layer
 layer = pdk.Layer(
     'ScatterplotLayer',
     data=data,
     get_position='[LONGITUDE, LATITUDE]',
     get_radius=50000,  # Radius in meters
-    get_color=[0, 128, 255],  # Blue color
+    get_color=[0, 128, 255],  # Blue
     pickable=True
 )
 
-# Tooltip for the map
 tool_tip = {
     "html": "<b>Company:</b> {NAME}<br><b>State:</b> {STATE}<br><b>Revenue:</b> ${REVENUES}M",
     "style": {"backgroundColor": "steelblue", "color": "white"}
 }
 
-# Pydeck map rendering
-map = pdk.Deck(
-    layers=[layer],
-    initial_view_state=view_state,
-    tooltip=tool_tip
-)
+map = pdk.Deck(layers=[layer], initial_view_state=view_state, tooltip=tool_tip)
 st.pydeck_chart(map)
 
 # Revenue Analysis
@@ -68,7 +70,7 @@ st.bar_chart(revenue_by_state)
 st.header("Top Companies by Revenue")
 st.markdown("A list of the top 10 companies by revenue.")
 top_revenue = data.nlargest(10, 'REVENUES')[['NAME', 'REVENUES', 'STATE']]
-st.dataframe(top_revenue)  # Changed to `st.dataframe` for better formatting
+st.dataframe(top_revenue)
 
 # Filtering by State
 st.header("Filter by State")
@@ -77,7 +79,7 @@ filtered_data = data[data['STATE'].isin(states)] if states else data
 st.markdown("Filtered Data:")
 st.dataframe(filtered_data)
 
-# Customized Insights Section
+# Customized Insights
 st.header("Marketing Insights")
 st.markdown("""
 **Key Insights:**
