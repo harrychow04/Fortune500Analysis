@@ -1,5 +1,3 @@
-
-
 # Function to load data without caching
 def load_data(file_path):
     if not os.path.exists(file_path):
