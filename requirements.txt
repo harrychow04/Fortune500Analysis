@@ -1,3 +1,4 @@
 pandas
 streamlit
 pydeck
+matplotlib.pyplot
