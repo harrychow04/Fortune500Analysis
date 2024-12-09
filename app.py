@@ -1,88 +1,109 @@
-# Function to load data without caching
-def load_data(file_path):
-    if not os.path.exists(file_path):
-        st.error(f"Error: File not found at {file_path}")
-        st.stop()
+"""
+Name:       Your Name
+CS230:      Section XXX
+Data:       Fortune 500 Corporate Headquarters
+URL:        Add your Streamlit Cloud link here
+
+Description:    
+This program creates an interactive data explorer using the Fortune 500 dataset.
+It allows users to filter data, visualize distributions, and view corporate headquarters on a map.
+"""
+
+import pandas as pd
+import streamlit as st
+import pydeck as pdk
+import matplotlib.pyplot as plt
+
+# Load Data
+@st.cache
+def load_data(filepath):
     try:
-        data = pd.read_csv(file_path)
-        # Clean data
-        data = data.dropna(subset=['LATITUDE', 'LONGITUDE', 'NAME', 'STATE', 'REVENUES'])
-        data['REVENUES'] = pd.to_numeric(data['REVENUES'], errors='coerce')
+        data = pd.read_csv(filepath)
         return data
     except Exception as e:
         st.error(f"Error loading data: {e}")
-        st.stop()
+        return pd.DataFrame()
 
-# Path to the data file
-FILE_PATH = 'Fortune 500 Corporate Headquarters.csv'
+# Data Cleaning
+def clean_data(df):
+    df = df.dropna()  # Drop rows with missing values
+    df = df.rename(columns=lambda x: x.strip())  # Remove extra spaces
+    return df
 
-# Load data
-data = load_data(FILE_PATH)
+# Visualization Functions
+def bar_chart(df, column):
+    counts = df[column].value_counts()
+    fig, ax = plt.subplots()
+    counts.plot(kind='bar', ax=ax)
+    ax.set_title(f"Distribution of {column}")
+    ax.set_xlabel(column)
+    ax.set_ylabel("Count")
+    st.pyplot(fig)
 
-# Title and description
-st.title("Fortune 500 Corporate Headquarters Analysis")
-st.markdown("""
-This interactive app visualizes the geographic distribution of Fortune 500 companies and provides insights into regional trends and revenue distribution.
-""")
+def pie_chart(df, column):
+    counts = df[column].value_counts()
+    fig, ax = plt.subplots()
+    counts.plot(kind='pie', autopct='%1.1f%%', ax=ax)
+    ax.set_ylabel("")
+    ax.set_title(f"{column} Distribution")
+    st.pyplot(fig)
 
-# Data Overview
-st.header("Data Overview")
-st.markdown("A snapshot of the cleaned dataset.")
-st.dataframe(data.head())
+def create_map(df):
+    st.pydeck_chart(pdk.Deck(
+        map_style='mapbox://styles/mapbox/light-v9',
+        initial_view_state=pdk.ViewState(
+            latitude=df['latitude'].mean(),
+            longitude=df['longitude'].mean(),
+            zoom=4,
+            pitch=50,
+        ),
+        layers=[
+            pdk.Layer(
+                'ScatterplotLayer',
+                data=df,
+                get_position='[longitude, latitude]',
+                get_color='[200, 30, 0, 160]',
+                get_radius=10000,
+            ),
+        ],
+    ))
 
-# Interactive Map
-st.header("Geographic Distribution of Headquarters")
-st.markdown("Explore the locations of Fortune 500 headquarters across the USA.")
+# Streamlit UI
+st.title("Fortune 500 Data Explorer")
+st.sidebar.title("Filters")
 
-# Configure map settings
-view_state = pdk.ViewState(
-    latitude=data['LATITUDE'].mean(),
-    longitude=data['LONGITUDE'].mean(),
-    zoom=4,
-    pitch=0
-)
+# Load and Clean Data
+data_file = "Fortune 500 Corporate Headquarters.csv"
+df = load_data(data_file)
+df = clean_data(df)
 
-layer = pdk.Layer(
-    'ScatterplotLayer',
-    data=data,
-    get_position='[LONGITUDE, LATITUDE]',
-    get_radius=50000,  # Radius in meters
-    get_color=[0, 128, 255],  # Blue
-    pickable=True
-)
+if not df.empty:
+    # Sidebar Filters
+    states = st.sidebar.multiselect("Select States", df['state'].unique())
+    industries = st.sidebar.multiselect("Select Industries", df['industry'].unique())
+    
+    # Filter Data
+    if states:
+        df = df[df['state'].isin(states)]
+    if industries:
+        df = df[df['industry'].isin(industries)]
 
-tool_tip = {
-    "html": "<b>Company:</b> {NAME}<br><b>State:</b> {STATE}<br><b>Revenue:</b> ${REVENUES}M",
-    "style": {"backgroundColor": "steelblue", "color": "white"}
-}
+    # Display Data
+    st.write("Filtered Data", df)
 
-map = pdk.Deck(layers=[layer], initial_view_state=view_state, tooltip=tool_tip)
-st.pydeck_chart(map)
+    # Visualizations
+    st.header("Visualizations")
+    chart_type = st.selectbox("Choose Chart Type", ["Bar Chart", "Pie Chart", "Map"])
+    
+    if chart_type == "Bar Chart":
+        column = st.selectbox("Choose Column for Bar Chart", ["state", "industry"])
+        bar_chart(df, column)
+    elif chart_type == "Pie Chart":
+        column = st.selectbox("Choose Column for Pie Chart", ["state", "industry"])
+        pie_chart(df, column)
+    elif chart_type == "Map":
+        create_map(df)
+else:
+    st.error("No data available. Please check the data file.")
 
-# Revenue Analysis
-st.header("Revenue Distribution by State")
-st.markdown("This chart shows the total revenue generated by Fortune 500 companies in each state.")
-revenue_by_state = data.groupby('STATE')['REVENUES'].sum().sort_values(ascending=False)
-st.bar_chart(revenue_by_state)
-
-# Top Companies by Revenue
-st.header("Top Companies by Revenue")
-st.markdown("A list of the top 10 companies by revenue.")
-top_revenue = data.nlargest(10, 'REVENUES')[['NAME', 'REVENUES', 'STATE']]
-st.dataframe(top_revenue)
-
-# Filtering by State
-st.header("Filter by State")
-states = st.multiselect("Select states to filter", options=data['STATE'].unique(), default=[])
-filtered_data = data[data['STATE'].isin(states)] if states else data
-st.markdown("Filtered Data:")
-st.dataframe(filtered_data)
-
-# Customized Insights
-st.header("Marketing Insights")
-st.markdown("""
-**Key Insights:**
-- States with high revenue concentrations, such as California and Texas, are critical for business development.
-- Use this data to identify potential regions for marketing campaigns or financial services.
-""")
-
+st.sidebar.markdown("### Project by Your Name")
