@@ -1,7 +1,3 @@
-import pandas as pd
-import streamlit as st
-import pydeck as pdk
-
 # Load the data
 @st.cache_data
 def load_data():
