@@ -1,25 +1,25 @@
-# Define function to load data
-@st.cache_data
+
+
+# Function to load data without caching
 def load_data(file_path):
-    # Check if file exists
     if not os.path.exists(file_path):
-        raise FileNotFoundError(f"File not found: {file_path}")
-    # Load data
-    data = pd.read_csv(file_path)
-    # Clean data
-    data = data.dropna(subset=['LATITUDE', 'LONGITUDE', 'NAME', 'STATE', 'REVENUES'])
-    data['REVENUES'] = pd.to_numeric(data['REVENUES'], errors='coerce')
-    return data
+        st.error(f"Error: File not found at {file_path}")
+        st.stop()
+    try:
+        data = pd.read_csv(file_path)
+        # Clean data
+        data = data.dropna(subset=['LATITUDE', 'LONGITUDE', 'NAME', 'STATE', 'REVENUES'])
+        data['REVENUES'] = pd.to_numeric(data['REVENUES'], errors='coerce')
+        return data
+    except Exception as e:
+        st.error(f"Error loading data: {e}")
+        st.stop()
 
 # Path to the data file
 FILE_PATH = 'Fortune 500 Corporate Headquarters.csv'
 
 # Load data
-try:
-    data = load_data(FILE_PATH)
-except FileNotFoundError as e:
-    st.error(str(e))
-    st.stop()
+data = load_data(FILE_PATH)
 
 # Title and description
 st.title("Fortune 500 Corporate Headquarters Analysis")
@@ -36,6 +36,7 @@ st.dataframe(data.head())
 st.header("Geographic Distribution of Headquarters")
 st.markdown("Explore the locations of Fortune 500 headquarters across the USA.")
 
+# Configure map settings
 view_state = pdk.ViewState(
     latitude=data['LATITUDE'].mean(),
     longitude=data['LONGITUDE'].mean(),
@@ -86,3 +87,4 @@ st.markdown("""
 - States with high revenue concentrations, such as California and Texas, are critical for business development.
 - Use this data to identify potential regions for marketing campaigns or financial services.
 """)
+
