@@ -33,7 +33,7 @@ def calculate_summary(df):
 
 # [PY3] Error checking with try/except
 try:
-    data_file = '/mnt/data/Fortune 500 Corporate Headquarters.csv'
+    data_file = 'Fortune 500 Corporate Headquarters.csv'
     df = load_and_clean_data(data_file)
 except Exception as e:
     st.error(f"Failed to load the data: {e}")
@@ -47,7 +47,9 @@ st.sidebar.text(f"Industries: {', '.join(industry_dict.values())}")
 
 # Streamlit Features
 st.title("Fortune 500 Data Explorer")
-st.sidebar.image("https://via.placeholder.com/150", caption="FortuneView Logo")  # [ST4] Customized sidebar
+
+# [ST4] Customized sidebar with logo from repository
+st.sidebar.image("logo.png", caption="FortuneView Logo")  # Adjust the path to match your repository structure
 
 # [ST1] Slider for filtering employees
 employee_filter = st.sidebar.slider("Minimum Number of Employees", 0, int(df['EMPLOYEES'].max()), 1000)
