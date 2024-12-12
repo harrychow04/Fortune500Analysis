@@ -20,6 +20,8 @@ def load_and_clean_data(filepath):
 
 # [PY2] Function that returns more than one value
 def calculate_summary(df):
+    if df.empty:
+        return 0, 0, 0  # Handle case where no data is filtered
     total_revenue = df['REVENUES'].sum() / 1e12  # Convert to trillions
     total_employees = df['EMPLOYEES'].sum()
     avg_revenue_per_employee = total_revenue / total_employees if total_employees > 0 else 0
@@ -76,13 +78,6 @@ with tab1:
     fig2 = px.pie(top_states, names='STATE', values='EMPLOYEES', title="Employee Distribution by State")
     st.plotly_chart(fig2)
 
-    # Bar Chart: Top States by Revenue
-    st.subheader("Top States by Revenue")
-    state_revenue = filtered_df.groupby('STATE')['REVENUES'].sum().sort_values(ascending=False).reset_index()
-    state_revenue['REVENUES'] = state_revenue['REVENUES'] / 1e12  # Convert to trillions
-    fig6 = px.bar(state_revenue.head(10), x='STATE', y='REVENUES', title="Top States by Revenue (in Trillions)", labels={'REVENUES': 'Revenue (Trillions)'})
-    st.plotly_chart(fig6)
-
     # Heatmap: Profit by State
     st.subheader("Profit Heatmap by State")
     state_profits = filtered_df.groupby('STATE')['PROFIT'].sum().reset_index()
@@ -103,7 +98,7 @@ with tab1:
         "ScatterplotLayer",
         data=filtered_df,
         get_position=["LONGITUDE", "LATITUDE"],
-        get_radius=filtered_df['REVENUES'] / 1e9,  # Adjusted for smaller dots, proportional to billions
+        get_radius=filtered_df['REVENUES'] / 1e10,  # Further reduced dot size, proportional to billions
         get_color=[255, 0, 0],
         pickable=True,
     )
@@ -111,27 +106,7 @@ with tab1:
     map_fig = pdk.Deck(layers=[layer], initial_view_state=view_state, tooltip={"text": "{NAME}"})
     st.pydeck_chart(map_fig)
 
-    # Scatter Plot: Revenue vs Employees
-    st.subheader("Company Revenue vs Employees")
-
-    # Calculate max values for a dynamic range
-    x_max = filtered_df['EMPLOYEES'].max() * 1.1  # Extend 10% beyond max value
-    y_max = filtered_df['REVENUES'].max() / 1e9 * 1.1  # Extend 10% beyond max value and adjust for billions
-
-    # Plot with adjusted range
-    fig3 = px.scatter(
-        filtered_df,
-        x='EMPLOYEES',
-        y=filtered_df['REVENUES'] / 1e9,  # Adjusted for billions
-        hover_data=['NAME', 'CITY'],
-        title="Company Revenue vs Employees",
-        labels={'EMPLOYEES': 'Employees', 'REVENUES': 'Revenues (in Billions)'},
-    )
-    fig3.update_xaxes(range=[0, x_max])  # Set X-axis range
-    fig3.update_yaxes(range=[0, y_max])  # Set Y-axis range
-    st.plotly_chart(fig3)
-
-# Tab 2: Company Comparison (unchanged but updated for revenues in trillions)
+# Tab 2: Company Comparison
 with tab2:
     st.subheader("Company Comparison")
 
