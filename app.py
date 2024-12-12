@@ -9,7 +9,6 @@ Description:
 This program ... (a few sentences about your program and the queries and charts)
 """
 
-
 import pandas as pd
 import streamlit as st
 import pydeck as pdk
@@ -53,28 +52,32 @@ df = load_and_clean_data(data_file)
 # Streamlit app with tabs
 st.title("Fortune 500 Data Explorer")
 
-tab1, tab2 = st.tabs(["State Comparison", "Company Map"])
+try:
+    tab1, tab2 = st.tabs(["State Comparison", "Company Map"])
 
-# Tab 1: State Comparison
-with tab1:
-    st.subheader("State Comparison")
-    total_revenue, total_employees, avg_revenue_per_employee = calculate_summary(df)
-    st.write(f"**Total Revenue**: ${total_revenue:,.2f} Billion")
-    st.write(f"**Total Employees**: {total_employees:,}")
-    st.write(f"**Average Revenue per Employee**: ${avg_revenue_per_employee:,.2f} Billion")
+    # Tab 1: State Comparison
+    with tab1:
+        st.subheader("State Comparison")
+        total_revenue, total_employees, avg_revenue_per_employee = calculate_summary(df)
+        st.write(f"**Total Revenue**: ${total_revenue:,.2f} Billion")
+        st.write(f"**Total Employees**: {total_employees:,}")
+        st.write(f"**Average Revenue per Employee**: ${avg_revenue_per_employee:,.2f} Billion")
 
-# Tab 2: Static Dot Map
-with tab2:
-    st.subheader("Company Headquarters Map")
-    # Use static dot size for simplicity
-    layer = pdk.Layer(
-        "ScatterplotLayer",
-        data=df,
-        get_position=["LONGITUDE", "LATITUDE"],
-        get_radius=50000,  # Static radius size for all dots
-        get_color=[255, 0, 0],
-        pickable=True,
-    )
-    view_state = pdk.ViewState(latitude=37.7749, longitude=-122.4194, zoom=3)
-    map_fig = pdk.Deck(layers=[layer], initial_view_state=view_state, tooltip={"text": "{NAME}"})
-    st.pydeck_chart(map_fig)
+    # Tab 2: Static Dot Map
+    with tab2:
+        st.subheader("Company Headquarters Map")
+        # Use static dot size for simplicity
+        layer = pdk.Layer(
+            "ScatterplotLayer",
+            data=df,
+            get_position=["LONGITUDE", "LATITUDE"],
+            get_radius=30000,  # Static radius size for all dots
+            get_color=[255, 0, 0],
+            pickable=True,
+        )
+        view_state = pdk.ViewState(latitude=37.7749, longitude=-122.4194, zoom=3)
+        map_fig = pdk.Deck(layers=[layer], initial_view_state=view_state, tooltip={"text": "{NAME}"})
+        st.pydeck_chart(map_fig)
+
+except Exception as e:
+    st.error(f"An error occurred: {e}")
