@@ -34,7 +34,7 @@ except Exception as e:
     st.error(f"Failed to load the data: {e}")
 
 # Sidebar with logo and description
-st.sidebar.image("logo.png", caption="FortuneView Logo")  # Ensure the logo file is in the same directory
+st.sidebar.image("logo.png", caption=None)  # Removed caption text
 st.sidebar.markdown("This app allows users to explore data on Fortune 500 companies through state comparisons and detailed company comparisons. Gain insights into revenue, profits, and employee distribution.")
 
 # Streamlit app with tabs
@@ -62,23 +62,27 @@ with tab1:
     st.write(f"**Total Employees**: {total_employees:,}")
     st.write(f"**Average Revenue per Employee**: ${avg_revenue_per_employee:,.2f}")
     
-    # Visualizations
-    state_revenue = filtered_df.groupby('STATE')['REVENUES'].sum().sort_values(ascending=False).reset_index()
-    fig1 = px.bar(state_revenue, x='STATE', y='REVENUES', title="Total Revenue by State (in $)", labels={'REVENUES': 'Revenue ($)'})
-    st.plotly_chart(fig1)
-
+    # Pie Chart: Employee Distribution with improved readability
+    st.subheader("Employee Distribution by State")
     state_employees = filtered_df.groupby('STATE')['EMPLOYEES'].sum().reset_index()
-    fig2 = px.pie(state_employees, names='STATE', values='EMPLOYEES', title="Employee Distribution by State")
+    state_employees = state_employees.sort_values(by='EMPLOYEES', ascending=False)
+    
+    # Limit to top 10 states and group others
+    top_states = state_employees[:10]
+    other_states = state_employees[10:]
+    other_sum = other_states['EMPLOYEES'].sum()
+    top_states = top_states.append({'STATE': 'Other', 'EMPLOYEES': other_sum}, ignore_index=True)
+    
+    fig2 = px.pie(top_states, names='STATE', values='EMPLOYEES', title="Employee Distribution by State")
     st.plotly_chart(fig2)
 
-    fig3 = px.scatter(filtered_df, x='EMPLOYEES', y='REVENUES', hover_data=['NAME', 'CITY'], title="Company Revenue vs Employees")
-    st.plotly_chart(fig3)
-
+    # Map: Adjusted dot size based on revenue
+    st.subheader("Company Headquarters Map")
     layer = pdk.Layer(
         "ScatterplotLayer",
         data=filtered_df,
         get_position=["LONGITUDE", "LATITUDE"],
-        get_radius=100000,
+        get_radius="REVENUES",  # Radius proportional to revenue
         get_color=[255, 0, 0],
         pickable=True,
     )
@@ -86,17 +90,25 @@ with tab1:
     map_fig = pdk.Deck(layers=[layer], initial_view_state=view_state, tooltip={"text": "{NAME}"})
     st.pydeck_chart(map_fig)
 
-    state_profits = filtered_df.groupby('STATE')['PROFIT'].sum().reset_index()
-    fig4 = px.choropleth(
-        state_profits,
-        locations='STATE',
-        locationmode='USA-states',
-        color='PROFIT',
-        color_continuous_scale='reds',
-        title="Total Profit by State",
-        scope="usa",
+    # Scatter Plot: Revenue vs Employees with optimized axes
+    st.subheader("Company Revenue vs Employees")
+
+    # Calculate max values for a dynamic range
+    x_max = filtered_df['EMPLOYEES'].max() * 1.1  # Extend 10% beyond max value
+    y_max = filtered_df['REVENUES'].max() * 1.1  # Extend 10% beyond max value
+
+    # Plot with adjusted range
+    fig3 = px.scatter(
+        filtered_df,
+        x='EMPLOYEES',
+        y='REVENUES',
+        hover_data=['NAME', 'CITY'],
+        title="Company Revenue vs Employees",
+        labels={'EMPLOYEES': 'Employees', 'REVENUES': 'Revenues (in Millions)'},
     )
-    st.plotly_chart(fig4)
+    fig3.update_xaxes(range=[0, x_max])  # Set X-axis range
+    fig3.update_yaxes(range=[0, y_max])  # Set Y-axis range
+    st.plotly_chart(fig3)
 
 # Tab 2: Company Comparison
 with tab2:
@@ -117,6 +129,8 @@ with tab2:
     st.write(f"**Employees:** {company_data1['EMPLOYEES']:,}")
     st.write(f"**Revenue:** ${company_data1['REVENUES']:,.2f}")
     st.write(f"**Profit:** ${company_data1['PROFIT']:,.2f}")
+    if company_data1['COMMENTS'] != "NOT AVAILABLE":
+        st.write(f"**Comments:** {company_data1['COMMENTS']}")
     st.write(f"**Website:** [Visit]({company_data1['WEBSITE']})")
 
     st.markdown("### Company 2 Details")
@@ -125,6 +139,8 @@ with tab2:
     st.write(f"**Employees:** {company_data2['EMPLOYEES']:,}")
     st.write(f"**Revenue:** ${company_data2['REVENUES']:,.2f}")
     st.write(f"**Profit:** ${company_data2['PROFIT']:,.2f}")
+    if company_data2['COMMENTS'] != "NOT AVAILABLE":
+        st.write(f"**Comments:** {company_data2['COMMENTS']}")
     st.write(f"**Website:** [Visit]({company_data2['WEBSITE']})")
 
     # Comparison Chart
