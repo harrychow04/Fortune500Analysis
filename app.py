@@ -7,6 +7,7 @@ URL:        Link to your web application on Streamlit Cloud (if posted)
 Description:    
 This app allows users to explore data on Fortune 500 companies through state comparisons and detailed company comparisons. Gain insights into revenue, profits, and employee distribution.
 """
+
 import pandas as pd
 import streamlit as st
 import pydeck as pdk
@@ -17,15 +18,7 @@ import plotly.express as px
 def load_and_clean_data(filepath):
     try:
         df = pd.read_csv(filepath)
-        # Strip whitespace from column names to avoid KeyError
-        df.columns = df.columns.str.strip()
-
-        # Ensure columns are strings before applying `.str.replace`
-        df['REVENUES'] = df['REVENUES'].astype(str)
-        df['EMPLOYEES'] = df['EMPLOYEES'].astype(str)
-        df['PROFIT'] = df['PROFIT'].astype(str)
-        
-        # Convert REVENUES, EMPLOYEES, and PROFIT to numeric
+        df.columns = df.columns.str.strip()  # Strip whitespace from column names
         df['REVENUES'] = pd.to_numeric(df['REVENUES'].str.replace(',', ''), errors='coerce').fillna(0)
         df['EMPLOYEES'] = pd.to_numeric(df['EMPLOYEES'].str.replace(',', ''), errors='coerce').fillna(0)
         df['PROFIT'] = pd.to_numeric(df['PROFIT'].str.replace(',', ''), errors='coerce').fillna(0)
@@ -34,6 +27,12 @@ def load_and_clean_data(filepath):
         st.error(f"Error loading data: {e}")
         return pd.DataFrame()
 
+# [PY2] Function that returns more than one value
+def calculate_summary(df):
+    total_revenue = df['REVENUES'].sum()
+    total_employees = df['EMPLOYEES'].sum()
+    return total_revenue, total_employees
+
 # Load data
 data_file = 'Fortune 500 Corporate Headquarters.csv'
 df = load_and_clean_data(data_file)
@@ -41,7 +40,7 @@ df = load_and_clean_data(data_file)
 # Sidebar with logo and description
 st.sidebar.image("logo.png", caption=None)
 st.sidebar.markdown(
-    "This app allows users to explore data on Fortune 500 companies through state comparisons, company comparisons, and generate custom insights."
+    "Explore Fortune 500 companies through state comparisons, company maps, and custom insights."
 )
 
 # Streamlit app with tabs
@@ -51,38 +50,35 @@ tab1, tab2, tab3, tab4 = st.tabs(["State Comparison", "Company Map", "Company Co
 # Tab 1: State Comparison
 with tab1:
     st.subheader("State Comparison")
-    
+
     # Filters
     state_list = ["All States"] + sorted(df['STATE'].unique())
     selected_states = st.sidebar.multiselect("Filter by States", state_list, default="All States")
-    
-    if "All States" in selected_states:
-        filtered_df = df
-    else:
-        filtered_df = df[df['STATE'].isin(selected_states)]
-    
-    # Summary Metrics
-    total_revenue = filtered_df['REVENUES'].sum() / 1e3  # Convert to billions
-    total_employees = filtered_df['EMPLOYEES'].sum()
-    st.write(f"**Total Revenue**: ${total_revenue:,.2f} Billion")
+
+    filtered_df = df if "All States" in selected_states else df[df['STATE'].isin(selected_states)]
+
+    # [PY2] Summary Metrics
+    total_revenue, total_employees = calculate_summary(filtered_df)
+    st.write(f"**Total Revenue**: ${total_revenue:,.0f}")
     st.write(f"**Total Employees**: {total_employees:,}")
-    
-    # Scatter Plot: Revenue vs Employees
+
+    # [VIZ1] Scatter Plot: Revenue vs Employees
     st.subheader("Revenue vs Employees")
     fig1 = px.scatter(
         filtered_df,
         x='EMPLOYEES',
-        y=filtered_df['REVENUES'] / 1e9,  # Convert to billions
+        y='REVENUES',
         hover_data=['NAME', 'CITY'],
         title="Company Revenue vs Employees",
-        labels={'EMPLOYEES': 'Employees', 'y': 'Revenue (in Billions)'},
+        labels={'EMPLOYEES': 'Employees', 'REVENUES': 'Revenue'},
     )
+    fig1.update_traces(texttemplate='%{y:,}', textposition='top center')
     st.plotly_chart(fig1)
 
-    # Heatmaps: Vertically aligned
+    # Heatmaps
     st.subheader("Heatmaps")
-    
-    # Profit by State
+
+    # [DA3] Profit by State
     profit_by_state = filtered_df.groupby('STATE')['PROFIT'].sum().reset_index()
     fig2 = px.choropleth(
         profit_by_state,
@@ -95,7 +91,7 @@ with tab1:
     )
     st.plotly_chart(fig2)
 
-    # Revenue by State
+    # [DA2] Revenue by State
     revenue_by_state = filtered_df.groupby('STATE')['REVENUES'].sum().reset_index()
     fig3 = px.choropleth(
         revenue_by_state,
@@ -108,7 +104,7 @@ with tab1:
     )
     st.plotly_chart(fig3)
 
-    # Companies by State
+    # [DA5] Companies by State
     companies_by_state = filtered_df.groupby('STATE').size().reset_index(name='COMPANIES')
     fig4 = px.choropleth(
         companies_by_state,
@@ -139,90 +135,50 @@ with tab2:
 # Tab 3: Company Comparison
 with tab3:
     st.subheader("Company Comparison")
-    
+
     company_list = sorted(df['NAME'].unique())
     company1 = st.selectbox("Select First Company", company_list, index=0)
     company2 = st.selectbox("Select Second Company", company_list, index=1)
-    
-    # Retrieve details for the selected companies
+
+    # Comparison Data
     company_data1 = df[df['NAME'] == company1]
     company_data2 = df[df['NAME'] == company2]
-    
+
     if not company_data1.empty and not company_data2.empty:
         st.write("### Comparison Summary")
         col1, col2 = st.columns(2)
-        
+
         with col1:
             st.write(f"**{company1}**")
-            revenue1 = company_data1['REVENUES'].iloc[0] / 1e9  # Convert to billions
-            profit1 = company_data1['PROFIT'].iloc[0] / 1e9  # Convert to billions
-            website1 = company_data1['WEBSITE'].iloc[0]
-            st.write(f"Revenue: ${revenue1:,.2f} Billion")
-            st.write(f"Profit: ${profit1:,.2f} Billion")
-            st.write(f"Website: [Link]({website1})")
+            st.write(f"Revenue: ${company_data1['REVENUES'].iloc[0]:,.0f}")
+            st.write(f"Profit: ${company_data1['PROFIT'].iloc[0]:,.0f}")
 
         with col2:
             st.write(f"**{company2}**")
-            revenue2 = company_data2['REVENUES'].iloc[0] / 1e9  # Convert to billions
-            profit2 = company_data2['PROFIT'].iloc[0] / 1e9  # Convert to billions
-            website2 = company_data2['WEBSITE'].iloc[0]
-            st.write(f"Revenue: ${revenue2:,.2f} Billion")
-            st.write(f"Profit: ${profit2:,.2f} Billion")
-            st.write(f"Website: [Link]({website2})")
-        
-        # Bar Graph Comparison
-        comparison_data = pd.DataFrame({
-            "Metric": ["Revenue", "Profit"],
-            company1: [revenue1, profit1],
-            company2: [revenue2, profit2],
-        })
-        fig5 = px.bar(
-            comparison_data,
-            x="Metric",
-            y=[company1, company2],
-            barmode="group",
-            title="Company Comparison",
-            labels={"value": "Amount (in Billions)", "variable": "Company"},
-        )
-        fig5.update_layout(yaxis_title="Amount (in Billions)")
-        fig5.update_traces(texttemplate='%{y:.2f}', textposition='outside')  # Add data labels
-        st.plotly_chart(fig5)
-    else:
-        st.error("Selected companies not found in the dataset.")
+            st.write(f"Revenue: ${company_data2['REVENUES'].iloc[0]:,.0f}")
+            st.write(f"Profit: ${company_data2['PROFIT'].iloc[0]:,.0f}")
 
 # Tab 4: Interactive Insights
 with tab4:
     st.subheader("Interactive Insights")
-
-    # Metric selection
     metric = st.selectbox("Select Metric", ["Revenue", "Profit", "Employees"])
     min_value = st.number_input(f"Minimum {metric}", min_value=0, value=0)
     max_value = st.number_input(f"Maximum {metric}", min_value=0, value=1000000)
-    
-    # Map metric to column name
-    column_map = {
-        "Revenue": "REVENUES",
-        "Profit": "PROFIT",
-        "Employees": "EMPLOYEES"
-    }
+
+    column_map = {"Revenue": "REVENUES", "Profit": "PROFIT", "Employees": "EMPLOYEES"}
     metric_column = column_map[metric]
 
-    # Filter data based on the selected metric
     filtered_insights = df[(df[metric_column] >= min_value) & (df[metric_column] <= max_value)]
-    
-    # Display filtered data and summary
-    st.write(f"Filtered Data ({metric}):", filtered_insights)
-    st.write(f"Total Companies: {len(filtered_insights)}")
-    
+
     if not filtered_insights.empty:
-        # Bar chart for the filtered data
-        fig6 = px.bar(
+        fig5 = px.bar(
             filtered_insights,
             x="NAME",
             y=metric_column,
             title=f"{metric} of Filtered Companies",
-            labels={metric_column: f"{metric} (in Billions)" if metric != "Employees" else metric},
+            labels={metric_column: metric},
         )
-        st.plotly_chart(fig6)
+        fig5.update_traces(texttemplate='%{y:,}', textposition='outside')
+        st.plotly_chart(fig5)
     else:
         st.write("No data available for the selected range.")
