@@ -33,6 +33,10 @@ try:
 except Exception as e:
     st.error(f"Failed to load the data: {e}")
 
+# Sidebar with logo and description
+st.sidebar.image("logo.png", caption="FortuneView Logo")  # Ensure the logo file is in the same directory
+st.sidebar.markdown("This app allows users to explore data on Fortune 500 companies through state comparisons and detailed company comparisons. Gain insights into revenue, profits, and employee distribution.")
+
 # Streamlit app with tabs
 st.title("Fortune 500 Data Explorer")
 
@@ -42,10 +46,15 @@ tab1, tab2 = st.tabs(["State Comparison", "Company Comparison"])
 with tab1:
     st.subheader("State Comparison")
     
-    # State filter
-    state_list = sorted(df['STATE'].unique())
-    selected_states = st.sidebar.multiselect("Filter by States", state_list, default=state_list)
-    filtered_df = df[df['STATE'].isin(selected_states)]
+    # State filter with "All States" option
+    state_list = ["All States"] + sorted(df['STATE'].unique())
+    selected_states = st.sidebar.multiselect("Filter by States", state_list, default="All States")
+    
+    # Adjust filter logic for "All States"
+    if "All States" in selected_states:
+        filtered_df = df
+    else:
+        filtered_df = df[df['STATE'].isin(selected_states)]
     
     # Summary Metrics
     total_revenue, total_employees, avg_revenue_per_employee = calculate_summary(filtered_df)
