@@ -1,3 +1,15 @@
+"""
+Name:       Harry Chow
+CS230:      Section 2
+Data:       https://www.kaggle.com/datasets/mannmann2/fortune-500-corporate-headquarters
+URL:        Link to your web application on Streamlit Cloud (if posted) 
+
+Description:    
+
+This program ... (a few sentences about your program and the queries and charts)
+"""
+
+
 import pandas as pd
 import streamlit as st
 import pydeck as pdk
