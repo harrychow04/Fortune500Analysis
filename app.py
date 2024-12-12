@@ -8,12 +8,11 @@ import pydeck as pdk
 def load_and_clean_data(filepath):
     try:
         df = pd.read_csv(filepath)
-        df['REVENUES'] = pd.to_numeric(df['REVENUES'], errors='coerce')
-        df['EMPLOYEES'] = pd.to_numeric(df['EMPLOYEES'], errors='coerce')
-        df['PROFIT'] = pd.to_numeric(df['PROFIT'], errors='coerce')
-        df['LATITUDE'] = pd.to_numeric(df['LATITUDE'], errors='coerce')
-        df['LONGITUDE'] = pd.to_numeric(df['LONGITUDE'], errors='coerce')
-        df.dropna(subset=['REVENUES', 'EMPLOYEES', 'PROFIT', 'LATITUDE', 'LONGITUDE'], inplace=True)
+        df['REVENUES'] = pd.to_numeric(df['REVENUES'], errors='coerce').fillna(0)
+        df['EMPLOYEES'] = pd.to_numeric(df['EMPLOYEES'], errors='coerce').fillna(0)
+        df['PROFIT'] = pd.to_numeric(df['PROFIT'], errors='coerce').fillna(0)
+        df['LATITUDE'] = pd.to_numeric(df['LATITUDE'], errors='coerce').fillna(0)
+        df['LONGITUDE'] = pd.to_numeric(df['LONGITUDE'], errors='coerce').fillna(0)
         return df
     except Exception as e:
         st.error(f"Error loading data: {e}")
@@ -23,7 +22,7 @@ def load_and_clean_data(filepath):
 def calculate_summary(df):
     total_revenue = df['REVENUES'].sum() / 1e12  # Convert to trillions
     total_employees = df['EMPLOYEES'].sum()
-    avg_revenue_per_employee = total_revenue / total_employees if total_employees else 0
+    avg_revenue_per_employee = total_revenue / total_employees if total_employees > 0 else 0
     return total_revenue, total_employees, avg_revenue_per_employee
 
 # Load data
@@ -62,7 +61,7 @@ with tab1:
     st.write(f"**Total Employees**: {total_employees:,}")
     st.write(f"**Average Revenue per Employee**: ${avg_revenue_per_employee:,.2f} Trillion")
     
-    # Pie Chart: Employee Distribution with improved readability
+    # Pie Chart: Employee Distribution
     st.subheader("Employee Distribution by State")
     state_employees = filtered_df.groupby('STATE')['EMPLOYEES'].sum().reset_index()
     state_employees = state_employees.sort_values(by='EMPLOYEES', ascending=False)
@@ -77,13 +76,34 @@ with tab1:
     fig2 = px.pie(top_states, names='STATE', values='EMPLOYEES', title="Employee Distribution by State")
     st.plotly_chart(fig2)
 
+    # Bar Chart: Top States by Revenue
+    st.subheader("Top States by Revenue")
+    state_revenue = filtered_df.groupby('STATE')['REVENUES'].sum().sort_values(ascending=False).reset_index()
+    state_revenue['REVENUES'] = state_revenue['REVENUES'] / 1e12  # Convert to trillions
+    fig6 = px.bar(state_revenue.head(10), x='STATE', y='REVENUES', title="Top States by Revenue (in Trillions)", labels={'REVENUES': 'Revenue (Trillions)'})
+    st.plotly_chart(fig6)
+
+    # Heatmap: Profit by State
+    st.subheader("Profit Heatmap by State")
+    state_profits = filtered_df.groupby('STATE')['PROFIT'].sum().reset_index()
+    fig4 = px.choropleth(
+        state_profits,
+        locations='STATE',
+        locationmode='USA-states',
+        color='PROFIT',
+        color_continuous_scale='reds',
+        title="Total Profit by State",
+        scope="usa",
+    )
+    st.plotly_chart(fig4)
+
     # Map: Adjusted dot size based on revenue
     st.subheader("Company Headquarters Map")
     layer = pdk.Layer(
         "ScatterplotLayer",
         data=filtered_df,
         get_position=["LONGITUDE", "LATITUDE"],
-        get_radius="REVENUES",  # Radius proportional to revenue
+        get_radius=filtered_df['REVENUES'] / 1e9,  # Adjusted for smaller dots, proportional to billions
         get_color=[255, 0, 0],
         pickable=True,
     )
@@ -91,27 +111,27 @@ with tab1:
     map_fig = pdk.Deck(layers=[layer], initial_view_state=view_state, tooltip={"text": "{NAME}"})
     st.pydeck_chart(map_fig)
 
-    # Scatter Plot: Revenue vs Employees with optimized axes
+    # Scatter Plot: Revenue vs Employees
     st.subheader("Company Revenue vs Employees")
 
     # Calculate max values for a dynamic range
     x_max = filtered_df['EMPLOYEES'].max() * 1.1  # Extend 10% beyond max value
-    y_max = filtered_df['REVENUES'].max() * 1.1  # Extend 10% beyond max value
+    y_max = filtered_df['REVENUES'].max() / 1e9 * 1.1  # Extend 10% beyond max value and adjust for billions
 
     # Plot with adjusted range
     fig3 = px.scatter(
         filtered_df,
         x='EMPLOYEES',
-        y='REVENUES',
+        y=filtered_df['REVENUES'] / 1e9,  # Adjusted for billions
         hover_data=['NAME', 'CITY'],
         title="Company Revenue vs Employees",
-        labels={'EMPLOYEES': 'Employees', 'REVENUES': 'Revenues (in Trillions)'},
+        labels={'EMPLOYEES': 'Employees', 'REVENUES': 'Revenues (in Billions)'},
     )
     fig3.update_xaxes(range=[0, x_max])  # Set X-axis range
     fig3.update_yaxes(range=[0, y_max])  # Set Y-axis range
     st.plotly_chart(fig3)
 
-# Tab 2: Company Comparison
+# Tab 2: Company Comparison (unchanged but updated for revenues in trillions)
 with tab2:
     st.subheader("Company Comparison")
 
@@ -128,8 +148,8 @@ with tab2:
     st.write(f"**Name:** {company_data1['NAME']}")
     st.write(f"**Address:** {company_data1['ADDRESS']}, {company_data1['CITY']}, {company_data1['STATE']} {company_data1['ZIP']}")
     st.write(f"**Employees:** {company_data1['EMPLOYEES']:,}")
-    st.write(f"**Revenue:** ${company_data1['REVENUES']:,.2f} Trillion")
-    st.write(f"**Profit:** ${company_data1['PROFIT']:,.2f} Billion")
+    st.write(f"**Revenue:** ${company_data1['REVENUES'] / 1e12:,.2f} Trillion")
+    st.write(f"**Profit:** ${company_data1['PROFIT'] / 1e9:,.2f} Billion")
     if company_data1['COMMENTS'] != "NOT AVAILABLE":
         st.write(f"**Comments:** {company_data1['COMMENTS']}")
     st.write(f"**Website:** [Visit]({company_data1['WEBSITE']})")
@@ -138,8 +158,8 @@ with tab2:
     st.write(f"**Name:** {company_data2['NAME']}")
     st.write(f"**Address:** {company_data2['ADDRESS']}, {company_data2['CITY']}, {company_data2['STATE']} {company_data2['ZIP']}")
     st.write(f"**Employees:** {company_data2['EMPLOYEES']:,}")
-    st.write(f"**Revenue:** ${company_data2['REVENUES']:,.2f} Trillion")
-    st.write(f"**Profit:** ${company_data2['PROFIT']:,.2f} Billion")
+    st.write(f"**Revenue:** ${company_data2['REVENUES'] / 1e12:,.2f} Trillion")
+    st.write(f"**Profit:** ${company_data2['PROFIT'] / 1e9:,.2f} Billion")
     if company_data2['COMMENTS'] != "NOT AVAILABLE":
         st.write(f"**Comments:** {company_data2['COMMENTS']}")
     st.write(f"**Website:** [Visit]({company_data2['WEBSITE']})")
@@ -147,8 +167,8 @@ with tab2:
     # Comparison Chart
     comparison_data = pd.DataFrame({
         "Metric": ["Revenue", "Profit", "Employees"],
-        company1: [company_data1['REVENUES'], company_data1['PROFIT'], company_data1['EMPLOYEES']],
-        company2: [company_data2['REVENUES'], company_data2['PROFIT'], company_data2['EMPLOYEES']],
+        company1: [company_data1['REVENUES'] / 1e12, company_data1['PROFIT'] / 1e9, company_data1['EMPLOYEES']],
+        company2: [company_data2['REVENUES'] / 1e12, company_data2['PROFIT'] / 1e9, company_data2['EMPLOYEES']],
     })
     fig5 = px.bar(comparison_data, x="Metric", y=[company1, company2], barmode="group", title="Company Comparison")
     st.plotly_chart(fig5)
