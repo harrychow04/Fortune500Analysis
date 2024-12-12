@@ -17,6 +17,9 @@ import plotly.express as px
 def load_and_clean_data(filepath):
     try:
         df = pd.read_csv(filepath)
+        # Strip whitespace from column names to avoid KeyError
+        df.columns = df.columns.str.strip()
+
         # Ensure columns are strings before applying `.str.replace`
         if not df['REVENUES'].dtype == 'object':
             df['REVENUES'] = df['REVENUES'].astype(str)
