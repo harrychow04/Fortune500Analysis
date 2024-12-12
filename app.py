@@ -51,7 +51,7 @@ def calculate_summary(df):
     return total_revenue, total_employees, avg_revenue_per_employee
 
 # Load data
-data_file = '/mnt/data/Fortune 500 Corporate Headquarters.csv'
+data_file = 'Fortune 500 Corporate Headquarters.csv'
 df = load_and_clean_data(data_file)
 
 # Sidebar with logo and description
