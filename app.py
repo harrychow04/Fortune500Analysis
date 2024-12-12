@@ -144,7 +144,7 @@ with tab3:
     company1 = st.selectbox("Select First Company", company_list, index=0)
     company2 = st.selectbox("Select Second Company", company_list, index=1)
     
-    # Fetch details for selected companies
+    # Retrieve details for the selected companies
     company_data1 = df[df['NAME'] == company1]
     company_data2 = df[df['NAME'] == company2]
     
@@ -154,19 +154,21 @@ with tab3:
         
         with col1:
             st.write(f"**{company1}**")
-            revenue1 = company_data1['REVENUES'].values[0] / 1e9 if not pd.isna(company_data1['REVENUES'].values[0]) else 0
-            profit1 = company_data1['PROFIT'].values[0] / 1e9 if not pd.isna(company_data1['PROFIT'].values[0]) else 0
+            revenue1 = company_data1['REVENUES'].iloc[0] / 1e9  # Convert to billions
+            profit1 = company_data1['PROFIT'].iloc[0] / 1e9  # Convert to billions
+            website1 = company_data1['WEBSITE'].iloc[0]
             st.write(f"Revenue: ${revenue1:,.2f} Billion")
             st.write(f"Profit: ${profit1:,.2f} Billion")
-            st.write(f"Website: [Link]({company_data1['WEBSITE'].values[0]})")
+            st.write(f"Website: [Link]({website1})")
 
         with col2:
             st.write(f"**{company2}**")
-            revenue2 = company_data2['REVENUES'].values[0] / 1e9 if not pd.isna(company_data2['REVENUES'].values[0]) else 0
-            profit2 = company_data2['PROFIT'].values[0] / 1e9 if not pd.isna(company_data2['PROFIT'].values[0]) else 0
+            revenue2 = company_data2['REVENUES'].iloc[0] / 1e9  # Convert to billions
+            profit2 = company_data2['PROFIT'].iloc[0] / 1e9  # Convert to billions
+            website2 = company_data2['WEBSITE'].iloc[0]
             st.write(f"Revenue: ${revenue2:,.2f} Billion")
             st.write(f"Profit: ${profit2:,.2f} Billion")
-            st.write(f"Website: [Link]({company_data2['WEBSITE'].values[0]})")
+            st.write(f"Website: [Link]({website2})")
         
         # Bar Graph Comparison
         comparison_data = pd.DataFrame({
@@ -180,8 +182,10 @@ with tab3:
             y=[company1, company2],
             barmode="group",
             title="Company Comparison",
-            labels={"value": "Amount (in Billions)", "variable": "Company"}
+            labels={"value": "Amount (in Billions)", "variable": "Company"},
         )
+        fig5.update_layout(yaxis_title="Amount (in Billions)")
+        fig5.update_traces(texttemplate='%{y:.2f}', textposition='outside')  # Add data labels
         st.plotly_chart(fig5)
     else:
         st.error("Selected companies not found in the dataset.")
