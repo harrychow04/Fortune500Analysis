@@ -16,16 +16,21 @@ import plotly.express as px
 @st.cache_data
 def load_and_clean_data(filepath):
     try:
+        # Load data and strip column names
         df = pd.read_csv(filepath)
         df.columns = df.columns.str.strip()
+
+        # Ensure specific columns exist
+        required_columns = ["REVENUES", "EMPLOYEES", "PROFIT", "NAME", "STATE", "LATITUDE", "LONGITUDE", "WEBSITE"]
+        for col in required_columns:
+            if col not in df.columns:
+                df[col] = None  # Create missing columns as empty
+
+        # Convert numeric columns to numeric and handle errors
         numeric_columns = ["REVENUES", "EMPLOYEES", "PROFIT"]
         for col in numeric_columns:
-            if col in df.columns:
-                df[col] = (
-                    pd.to_numeric(df[col].str.replace(",", ""), errors="coerce")
-                    .fillna(0)
-                    .div(1e6)  # Convert to millions
-                )
+            df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0).div(1e6)  # Convert to millions
+
         return df
     except Exception as e:
         st.error(f"Error loading data: {e}")
@@ -39,7 +44,9 @@ def calculate_summary(df):
 
 # [PY3] Filter data
 def filter_data(df, column, threshold):
-    return df[df[column] >= threshold] if column in df.columns else df
+    if column in df.columns:
+        return df[df[column] >= threshold]
+    return pd.DataFrame()
 
 # [PY4] Validate column existence
 def validate_column(df, column):
@@ -99,7 +106,7 @@ try:
     # Tab 3: Company Comparison
     with tab3:
         st.subheader("Company Comparison")
-        companies = st.multiselect("Select Companies", df["NAME"].unique())
+        companies = st.multiselect("Select Companies", df["NAME"].dropna().unique())
         if len(companies) == 2:
             company_data = df[df["NAME"].isin(companies)]
             for _, row in company_data.iterrows():
