@@ -21,7 +21,7 @@ def load_and_clean_data(filepath):
 
 # [PY2] Function that returns more than one value
 def calculate_summary(df):
-    total_revenue = df['REVENUES'].sum() / 1e3  # Convert to billions
+    total_revenue = df['REVENUES'].sum() / 1e12  # Convert to trillions
     total_employees = df['EMPLOYEES'].sum()
     avg_revenue_per_employee = total_revenue / total_employees if total_employees else 0
     return total_revenue, total_employees, avg_revenue_per_employee
@@ -58,9 +58,9 @@ with tab1:
     
     # Summary Metrics
     total_revenue, total_employees, avg_revenue_per_employee = calculate_summary(filtered_df)
-    st.write(f"**Total Revenue**: ${total_revenue:,.2f} Billion")
+    st.write(f"**Total Revenue**: ${total_revenue:,.2f} Trillion")
     st.write(f"**Total Employees**: {total_employees:,}")
-    st.write(f"**Average Revenue per Employee**: ${avg_revenue_per_employee:,.2f} Billion")
+    st.write(f"**Average Revenue per Employee**: ${avg_revenue_per_employee:,.2f} Trillion")
     
     # Pie Chart: Employee Distribution with improved readability
     st.subheader("Employee Distribution by State")
@@ -71,7 +71,8 @@ with tab1:
     top_states = state_employees[:10]
     other_states = state_employees[10:]
     other_sum = other_states['EMPLOYEES'].sum()
-    top_states = top_states.append({'STATE': 'Other', 'EMPLOYEES': other_sum}, ignore_index=True)
+    other_row = pd.DataFrame({'STATE': ['Other'], 'EMPLOYEES': [other_sum]})
+    top_states = pd.concat([top_states, other_row], ignore_index=True)
     
     fig2 = px.pie(top_states, names='STATE', values='EMPLOYEES', title="Employee Distribution by State")
     st.plotly_chart(fig2)
@@ -104,7 +105,7 @@ with tab1:
         y='REVENUES',
         hover_data=['NAME', 'CITY'],
         title="Company Revenue vs Employees",
-        labels={'EMPLOYEES': 'Employees', 'REVENUES': 'Revenues (in Billions)'},
+        labels={'EMPLOYEES': 'Employees', 'REVENUES': 'Revenues (in Trillions)'},
     )
     fig3.update_xaxes(range=[0, x_max])  # Set X-axis range
     fig3.update_yaxes(range=[0, y_max])  # Set Y-axis range
@@ -127,7 +128,7 @@ with tab2:
     st.write(f"**Name:** {company_data1['NAME']}")
     st.write(f"**Address:** {company_data1['ADDRESS']}, {company_data1['CITY']}, {company_data1['STATE']} {company_data1['ZIP']}")
     st.write(f"**Employees:** {company_data1['EMPLOYEES']:,}")
-    st.write(f"**Revenue:** ${company_data1['REVENUES']:,.2f} Billion")
+    st.write(f"**Revenue:** ${company_data1['REVENUES']:,.2f} Trillion")
     st.write(f"**Profit:** ${company_data1['PROFIT']:,.2f} Billion")
     if company_data1['COMMENTS'] != "NOT AVAILABLE":
         st.write(f"**Comments:** {company_data1['COMMENTS']}")
@@ -137,7 +138,7 @@ with tab2:
     st.write(f"**Name:** {company_data2['NAME']}")
     st.write(f"**Address:** {company_data2['ADDRESS']}, {company_data2['CITY']}, {company_data2['STATE']} {company_data2['ZIP']}")
     st.write(f"**Employees:** {company_data2['EMPLOYEES']:,}")
-    st.write(f"**Revenue:** ${company_data2['REVENUES']:,.2f} Billion")
+    st.write(f"**Revenue:** ${company_data2['REVENUES']:,.2f} Trillion")
     st.write(f"**Profit:** ${company_data2['PROFIT']:,.2f} Billion")
     if company_data2['COMMENTS'] != "NOT AVAILABLE":
         st.write(f"**Comments:** {company_data2['COMMENTS']}")
