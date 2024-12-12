@@ -141,8 +141,8 @@ with tab3:
     st.subheader("Company Comparison")
     
     company_list = sorted(df['NAME'].unique())
-    company1 = st.selectbox("Select First Company", company_list)
-    company2 = st.selectbox("Select Second Company", company_list)
+    company1 = st.selectbox("Select First Company", company_list, index=0)
+    company2 = st.selectbox("Select Second Company", company_list, index=1)
     
     # Fetch details for selected companies
     company_data1 = df[df['NAME'] == company1]
@@ -154,36 +154,71 @@ with tab3:
         
         with col1:
             st.write(f"**{company1}**")
-            st.write(f"Revenue: ${company_data1['REVENUES'].values[0] / 1e9:,.2f} Billion")
-            st.write(f"Profit: ${company_data1['PROFIT'].values[0] / 1e9:,.2f} Billion")
+            revenue1 = company_data1['REVENUES'].values[0] / 1e9 if not pd.isna(company_data1['REVENUES'].values[0]) else 0
+            profit1 = company_data1['PROFIT'].values[0] / 1e9 if not pd.isna(company_data1['PROFIT'].values[0]) else 0
+            st.write(f"Revenue: ${revenue1:,.2f} Billion")
+            st.write(f"Profit: ${profit1:,.2f} Billion")
             st.write(f"Website: [Link]({company_data1['WEBSITE'].values[0]})")
 
         with col2:
             st.write(f"**{company2}**")
-            st.write(f"Revenue: ${company_data2['REVENUES'].values[0] / 1e9:,.2f} Billion")
-            st.write(f"Profit: ${company_data2['PROFIT'].values[0] / 1e9:,.2f} Billion")
+            revenue2 = company_data2['REVENUES'].values[0] / 1e9 if not pd.isna(company_data2['REVENUES'].values[0]) else 0
+            profit2 = company_data2['PROFIT'].values[0] / 1e9 if not pd.isna(company_data2['PROFIT'].values[0]) else 0
+            st.write(f"Revenue: ${revenue2:,.2f} Billion")
+            st.write(f"Profit: ${profit2:,.2f} Billion")
             st.write(f"Website: [Link]({company_data2['WEBSITE'].values[0]})")
+        
+        # Bar Graph Comparison
+        comparison_data = pd.DataFrame({
+            "Metric": ["Revenue", "Profit"],
+            company1: [revenue1, profit1],
+            company2: [revenue2, profit2],
+        })
+        fig5 = px.bar(
+            comparison_data,
+            x="Metric",
+            y=[company1, company2],
+            barmode="group",
+            title="Company Comparison",
+            labels={"value": "Amount (in Billions)", "variable": "Company"}
+        )
+        st.plotly_chart(fig5)
     else:
-        st.write("Selected companies not found in the dataset.")
+        st.error("Selected companies not found in the dataset.")
 
 # Tab 4: Interactive Insights
 with tab4:
     st.subheader("Interactive Insights")
+
+    # Metric selection
     metric = st.selectbox("Select Metric", ["Revenue", "Profit", "Employees"])
     min_value = st.number_input(f"Minimum {metric}", min_value=0, value=0)
     max_value = st.number_input(f"Maximum {metric}", min_value=0, value=1000000)
     
-    if metric == "Revenue":
-        filtered_insights = df[(df['REVENUES'] >= min_value) & (df['REVENUES'] <= max_value)]
-    elif metric == "Profit":
-        filtered_insights = df[(df['PROFIT'] >= min_value) & (df['PROFIT'] <= max_value)]
-    else:  # Employees
-        filtered_insights = df[(df['EMPLOYEES'] >= min_value) & (df['EMPLOYEES'] <= max_value)]
+    # Map metric to column name
+    column_map = {
+        "Revenue": "REVENUES",
+        "Profit": "PROFIT",
+        "Employees": "EMPLOYEES"
+    }
+    metric_column = column_map[metric]
+
+    # Filter data based on the selected metric
+    filtered_insights = df[(df[metric_column] >= min_value) & (df[metric_column] <= max_value)]
     
+    # Display filtered data and summary
     st.write(f"Filtered Data ({metric}):", filtered_insights)
     st.write(f"Total Companies: {len(filtered_insights)}")
     
     if not filtered_insights.empty:
-        fig6 = px.bar(filtered_insights, x="NAME", y=metric.upper(), title=f"{metric} of Filtered Companies")
+        # Bar chart for the filtered data
+        fig6 = px.bar(
+            filtered_insights,
+            x="NAME",
+            y=metric_column,
+            title=f"{metric} of Filtered Companies",
+            labels={metric_column: f"{metric} (in Billions)" if metric != "Employees" else metric},
+        )
         st.plotly_chart(fig6)
-
+    else:
+        st.write("No data available for the selected range.")
