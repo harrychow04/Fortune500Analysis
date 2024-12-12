@@ -8,6 +8,14 @@ import plotly.express as px
 def load_and_clean_data(filepath):
     try:
         df = pd.read_csv(filepath)
+        # Ensure columns are strings before applying `.str.replace`
+        if not df['REVENUES'].dtype == 'object':
+            df['REVENUES'] = df['REVENUES'].astype(str)
+        if not df['EMPLOYEES'].dtype == 'object':
+            df['EMPLOYEES'] = df['EMPLOYEES'].astype(str)
+        if not df['PROFIT'].dtype == 'object':
+            df['PROFIT'] = df['PROFIT'].astype(str)
+        
         # Convert REVENUES and PROFIT to numeric, handling potential errors
         df['REVENUES'] = pd.to_numeric(df['REVENUES'].str.replace(',', ''), errors='coerce').fillna(0)
         df['EMPLOYEES'] = pd.to_numeric(df['EMPLOYEES'].str.replace(',', ''), errors='coerce').fillna(0)
@@ -27,7 +35,7 @@ def calculate_summary(df):
     return total_revenue, total_employees, avg_revenue_per_employee
 
 # Load data
-data_file = 'Fortune 500 Corporate Headquarters.csv'
+data_file = '/mnt/data/Fortune 500 Corporate Headquarters.csv'
 df = load_and_clean_data(data_file)
 
 # Streamlit app with tabs
