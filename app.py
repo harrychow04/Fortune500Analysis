@@ -6,7 +6,7 @@ URL:        Link to your web application on Streamlit Cloud (if posted)
 
 Description:    
 This app allows users to explore data on Fortune 500 companies through state comparisons and detailed company comparisons. Gain insights into revenue, profits, and employee distribution.
-'''
+"""
 
 import pandas as pd
 import streamlit as st
