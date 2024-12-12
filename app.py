@@ -57,54 +57,60 @@ with tab1:
     else:
         filtered_df = df[df['STATE'].isin(selected_states)]
     
-    # Summary Metrics
-    total_revenue, total_employees, avg_revenue_per_employee = calculate_summary(filtered_df)
-    st.write(f"**Total Revenue**: ${total_revenue:,.2f} Trillion")
-    st.write(f"**Total Employees**: {total_employees:,}")
-    st.write(f"**Average Revenue per Employee**: ${avg_revenue_per_employee:,.2f} Trillion")
-    
-    # Pie Chart: Employee Distribution
-    st.subheader("Employee Distribution by State")
-    state_employees = filtered_df.groupby('STATE')['EMPLOYEES'].sum().reset_index()
-    state_employees = state_employees.sort_values(by='EMPLOYEES', ascending=False)
-    
-    # Limit to top 10 states and group others
-    top_states = state_employees[:10]
-    other_states = state_employees[10:]
-    other_sum = other_states['EMPLOYEES'].sum()
-    other_row = pd.DataFrame({'STATE': ['Other'], 'EMPLOYEES': [other_sum]})
-    top_states = pd.concat([top_states, other_row], ignore_index=True)
-    
-    fig2 = px.pie(top_states, names='STATE', values='EMPLOYEES', title="Employee Distribution by State")
-    st.plotly_chart(fig2)
+    # Ensure filtered_df has valid data
+    if filtered_df.empty:
+        st.warning("No data available for the selected filters.")
+    else:
+        # Summary Metrics
+        total_revenue, total_employees, avg_revenue_per_employee = calculate_summary(filtered_df)
+        st.write(f"**Total Revenue**: ${total_revenue:,.2f} Trillion")
+        st.write(f"**Total Employees**: {total_employees:,}")
+        st.write(f"**Average Revenue per Employee**: ${avg_revenue_per_employee:,.2f} Trillion")
+        
+        # Pie Chart: Employee Distribution
+        st.subheader("Employee Distribution by State")
+        state_employees = filtered_df.groupby('STATE')['EMPLOYEES'].sum().reset_index()
+        state_employees = state_employees.sort_values(by='EMPLOYEES', ascending=False)
+        
+        # Limit to top 10 states and group others
+        top_states = state_employees[:10]
+        other_states = state_employees[10:]
+        other_sum = other_states['EMPLOYEES'].sum()
+        other_row = pd.DataFrame({'STATE': ['Other'], 'EMPLOYEES': [other_sum]})
+        top_states = pd.concat([top_states, other_row], ignore_index=True)
+        
+        fig2 = px.pie(top_states, names='STATE', values='EMPLOYEES', title="Employee Distribution by State")
+        st.plotly_chart(fig2)
 
-    # Heatmap: Profit by State
-    st.subheader("Profit Heatmap by State")
-    state_profits = filtered_df.groupby('STATE')['PROFIT'].sum().reset_index()
-    fig4 = px.choropleth(
-        state_profits,
-        locations='STATE',
-        locationmode='USA-states',
-        color='PROFIT',
-        color_continuous_scale='reds',
-        title="Total Profit by State",
-        scope="usa",
-    )
-    st.plotly_chart(fig4)
+        # Heatmap: Profit by State
+        st.subheader("Profit Heatmap by State")
+        state_profits = filtered_df.groupby('STATE')['PROFIT'].sum().reset_index()
+        fig4 = px.choropleth(
+            state_profits,
+            locations='STATE',
+            locationmode='USA-states',
+            color='PROFIT',
+            color_continuous_scale='reds',
+            title="Total Profit by State",
+            scope="usa",
+        )
+        st.plotly_chart(fig4)
 
-    # Map: Adjusted dot size based on revenue
-    st.subheader("Company Headquarters Map")
-    layer = pdk.Layer(
-        "ScatterplotLayer",
-        data=filtered_df,
-        get_position=["LONGITUDE", "LATITUDE"],
-        get_radius=filtered_df['REVENUES'] / 1e10,  # Further reduced dot size, proportional to billions
-        get_color=[255, 0, 0],
-        pickable=True,
-    )
-    view_state = pdk.ViewState(latitude=37.7749, longitude=-122.4194, zoom=3)
-    map_fig = pdk.Deck(layers=[layer], initial_view_state=view_state, tooltip={"text": "{NAME}"})
-    st.pydeck_chart(map_fig)
+        # Map: Adjusted dot size based on revenue
+        st.subheader("Company Headquarters Map")
+        # Ensure revenue is positive for valid dot sizes
+        filtered_df['REVENUES_ADJUSTED'] = filtered_df['REVENUES'].clip(lower=1e6)  # Minimum size
+        layer = pdk.Layer(
+            "ScatterplotLayer",
+            data=filtered_df,
+            get_position=["LONGITUDE", "LATITUDE"],
+            get_radius="REVENUES_ADJUSTED",  # Adjusted for smaller dots
+            get_color=[255, 0, 0],
+            pickable=True,
+        )
+        view_state = pdk.ViewState(latitude=37.7749, longitude=-122.4194, zoom=3)
+        map_fig = pdk.Deck(layers=[layer], initial_view_state=view_state, tooltip={"text": "{NAME}"})
+        st.pydeck_chart(map_fig)
 
 # Tab 2: Company Comparison
 with tab2:
