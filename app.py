@@ -186,3 +186,4 @@ with tab4:
     if not filtered_insights.empty:
         fig6 = px.bar(filtered_insights, x="NAME", y=metric.upper(), title=f"{metric} of Filtered Companies")
         st.plotly_chart(fig6)
+
