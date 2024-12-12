@@ -10,8 +10,10 @@ def load_and_clean_data(filepath):
         df = pd.read_csv(filepath)
         df['REVENUES'] = pd.to_numeric(df['REVENUES'], errors='coerce')
         df['EMPLOYEES'] = pd.to_numeric(df['EMPLOYEES'], errors='coerce')
-        df['PROFITS'] = pd.to_numeric(df['PROFITS'], errors='coerce')  # Ensure profits column is numeric
-        df.dropna(subset=['REVENUES', 'EMPLOYEES', 'PROFITS'], inplace=True)
+        df['PROFIT'] = pd.to_numeric(df['PROFIT'], errors='coerce')
+        df['LATITUDE'] = pd.to_numeric(df['LATITUDE'], errors='coerce')
+        df['LONGITUDE'] = pd.to_numeric(df['LONGITUDE'], errors='coerce')
+        df.dropna(subset=['REVENUES', 'EMPLOYEES', 'PROFIT', 'LATITUDE', 'LONGITUDE'], inplace=True)
         return df
     except Exception as e:
         st.error(f"Error loading data: {e}")
@@ -24,9 +26,6 @@ def calculate_summary(df):
     avg_revenue_per_employee = total_revenue / total_employees if total_employees else 0
     return total_revenue, total_employees, avg_revenue_per_employee
 
-# Streamlit Features
-st.title("Fortune 500 Data Explorer")
-
 # Load data
 try:
     data_file = 'Fortune 500 Corporate Headquarters.csv'
@@ -34,78 +33,96 @@ try:
 except Exception as e:
     st.error(f"Failed to load the data: {e}")
 
-# [ST2] Multi-select for states
-state_list = sorted(df['STATE'].unique())
-selected_states = st.sidebar.multiselect("Filter by States", state_list, default=state_list)
+# Streamlit app with tabs
+st.title("Fortune 500 Data Explorer")
 
-# Data Filtering
-filtered_df = df[df['STATE'].isin(selected_states)]
+tab1, tab2 = st.tabs(["State Comparison", "Company Comparison"])
 
-# Summary Metrics
-total_revenue, total_employees, avg_revenue_per_employee = calculate_summary(filtered_df)
+# Tab 1: State Comparison
+with tab1:
+    st.subheader("State Comparison")
+    
+    # State filter
+    state_list = sorted(df['STATE'].unique())
+    selected_states = st.sidebar.multiselect("Filter by States", state_list, default=state_list)
+    filtered_df = df[df['STATE'].isin(selected_states)]
+    
+    # Summary Metrics
+    total_revenue, total_employees, avg_revenue_per_employee = calculate_summary(filtered_df)
+    st.write(f"**Total Revenue**: ${total_revenue:,.2f} Million")
+    st.write(f"**Total Employees**: {total_employees:,}")
+    st.write(f"**Average Revenue per Employee**: ${avg_revenue_per_employee:,.2f}")
+    
+    # Visualizations
+    state_revenue = filtered_df.groupby('STATE')['REVENUES'].sum().sort_values(ascending=False).reset_index()
+    fig1 = px.bar(state_revenue, x='STATE', y='REVENUES', title="Total Revenue by State (in $)", labels={'REVENUES': 'Revenue ($)'})
+    st.plotly_chart(fig1)
 
-st.subheader("Summary Metrics")
-st.write(f"**Total Revenue**: ${total_revenue:,.2f} Million")
-st.write(f"**Total Employees**: {total_employees:,}")
-st.write(f"**Average Revenue per Employee**: ${avg_revenue_per_employee:,.2f}")
+    state_employees = filtered_df.groupby('STATE')['EMPLOYEES'].sum().reset_index()
+    fig2 = px.pie(state_employees, names='STATE', values='EMPLOYEES', title="Employee Distribution by State")
+    st.plotly_chart(fig2)
 
-# Visualizations
-# [VIZ1] Bar Chart: Revenue by State
-st.subheader("Revenue by State")
-state_revenue = filtered_df.groupby('STATE')['REVENUES'].sum().sort_values(ascending=False).reset_index()
-fig1 = px.bar(state_revenue, x='STATE', y='REVENUES', title="Total Revenue by State (in $)", labels={'REVENUES': 'Revenue ($)'})
-st.plotly_chart(fig1)
+    fig3 = px.scatter(filtered_df, x='EMPLOYEES', y='REVENUES', hover_data=['NAME', 'CITY'], title="Company Revenue vs Employees")
+    st.plotly_chart(fig3)
 
-# [VIZ2] Pie Chart: Employee Distribution by State
-st.subheader("Employee Distribution by State")
-state_employees = filtered_df.groupby('STATE')['EMPLOYEES'].sum().reset_index()
-fig2 = px.pie(state_employees, names='STATE', values='EMPLOYEES', title="Employee Distribution by State")
-st.plotly_chart(fig2)
+    layer = pdk.Layer(
+        "ScatterplotLayer",
+        data=filtered_df,
+        get_position=["LONGITUDE", "LATITUDE"],
+        get_radius=100000,
+        get_color=[255, 0, 0],
+        pickable=True,
+    )
+    view_state = pdk.ViewState(latitude=37.7749, longitude=-122.4194, zoom=3)
+    map_fig = pdk.Deck(layers=[layer], initial_view_state=view_state, tooltip={"text": "{NAME}"})
+    st.pydeck_chart(map_fig)
 
-# [VIZ3] Scatter Plot: Revenue vs Employees
-st.subheader("Revenue vs Employees")
-fig3 = px.scatter(filtered_df, x='EMPLOYEES', y='REVENUES', hover_data=['NAME', 'CITY'], title="Company Revenue vs Employees")
-st.plotly_chart(fig3)
+    state_profits = filtered_df.groupby('STATE')['PROFIT'].sum().reset_index()
+    fig4 = px.choropleth(
+        state_profits,
+        locations='STATE',
+        locationmode='USA-states',
+        color='PROFIT',
+        color_continuous_scale='reds',
+        title="Total Profit by State",
+        scope="usa",
+    )
+    st.plotly_chart(fig4)
 
-# [MAP] Headquarters Map with Smaller Dots
-st.subheader("Company Headquarters Map")
-layer = pdk.Layer(
-    "ScatterplotLayer",
-    data=filtered_df,
-    get_position=["LONGITUDE", "LATITUDE"],
-    get_radius=100000,  # Smaller radius
-    get_color=[255, 0, 0],
-    pickable=True,
-)
-view_state = pdk.ViewState(latitude=37.7749, longitude=-122.4194, zoom=3)
-map_fig = pdk.Deck(layers=[layer], initial_view_state=view_state, tooltip={"text": "{NAME}"})
-st.pydeck_chart(map_fig)
+# Tab 2: Company Comparison
+with tab2:
+    st.subheader("Company Comparison")
 
-# Heatmap: Profits by State
-st.subheader("Profit Heatmap by State")
-state_profits = filtered_df.groupby('STATE')['PROFITS'].sum().reset_index()
-fig4 = px.choropleth(
-    state_profits,
-    locations='STATE',
-    locationmode='USA-states',
-    color='PROFITS',
-    color_continuous_scale='reds',
-    title="Total Profits by State",
-    scope="usa",
-)
-st.plotly_chart(fig4)
+    # Select two companies for comparison
+    company_list = sorted(df['NAME'].unique())
+    company1 = st.selectbox("Select First Company", company_list, index=0)
+    company2 = st.selectbox("Select Second Company", company_list, index=1)
+    
+    company_data1 = df[df['NAME'] == company1].iloc[0]
+    company_data2 = df[df['NAME'] == company2].iloc[0]
 
-# Additional Analysis: Top Companies by Profit
-st.subheader("Top 5 Companies by Profit")
-top_profit_companies = filtered_df.nlargest(5, 'PROFITS')[['NAME', 'PROFITS', 'STATE']]
-st.table(top_profit_companies)
+    # Display details for both companies
+    st.markdown("### Company 1 Details")
+    st.write(f"**Name:** {company_data1['NAME']}")
+    st.write(f"**Address:** {company_data1['ADDRESS']}, {company_data1['CITY']}, {company_data1['STATE']} {company_data1['ZIP']}")
+    st.write(f"**Employees:** {company_data1['EMPLOYEES']:,}")
+    st.write(f"**Revenue:** ${company_data1['REVENUES']:,.2f}")
+    st.write(f"**Profit:** ${company_data1['PROFIT']:,.2f}")
+    st.write(f"**Website:** [Visit]({company_data1['WEBSITE']})")
 
-# Pivot Table: Profit by State and County
-st.subheader("Profit Pivot Table")
-profit_pivot = pd.pivot_table(filtered_df, values='PROFITS', index='STATE', columns='COUNTY', aggfunc='sum')
-st.dataframe(profit_pivot)
+    st.markdown("### Company 2 Details")
+    st.write(f"**Name:** {company_data2['NAME']}")
+    st.write(f"**Address:** {company_data2['ADDRESS']}, {company_data2['CITY']}, {company_data2['STATE']} {company_data2['ZIP']}")
+    st.write(f"**Employees:** {company_data2['EMPLOYEES']:,}")
+    st.write(f"**Revenue:** ${company_data2['REVENUES']:,.2f}")
+    st.write(f"**Profit:** ${company_data2['PROFIT']:,.2f}")
+    st.write(f"**Website:** [Visit]({company_data2['WEBSITE']})")
 
-# Efficiency Metric
-st.subheader("Company Data with Efficiency Metric")
-filtered_df['Profit_per_Employee'] = filtered_df['PROFITS'] / filtered_df['EMPLOYEES']
-st.dataframe(filtered_df[['NAME', 'STATE', 'PROFITS', 'EMPLOYEES', 'Profit_per_Employee']])
+    # Comparison Chart
+    comparison_data = pd.DataFrame({
+        "Metric": ["Revenue", "Profit", "Employees"],
+        company1: [company_data1['REVENUES'], company_data1['PROFIT'], company_data1['EMPLOYEES']],
+        company2: [company_data2['REVENUES'], company_data2['PROFIT'], company_data2['EMPLOYEES']],
+    })
+    fig5 = px.bar(comparison_data, x="Metric", y=[company1, company2], barmode="group", title="Company Comparison")
+    st.plotly_chart(fig5)
