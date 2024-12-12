@@ -21,12 +21,9 @@ def load_and_clean_data(filepath):
         df.columns = df.columns.str.strip()
 
         # Ensure columns are strings before applying `.str.replace`
-        if not df['REVENUES'].dtype == 'object':
-            df['REVENUES'] = df['REVENUES'].astype(str)
-        if not df['EMPLOYEES'].dtype == 'object':
-            df['EMPLOYEES'] = df['EMPLOYEES'].astype(str)
-        if not df['PROFIT'].dtype == 'object':
-            df['PROFIT'] = df['PROFIT'].astype(str)
+        df['REVENUES'] = df['REVENUES'].astype(str)
+        df['EMPLOYEES'] = df['EMPLOYEES'].astype(str)
+        df['PROFIT'] = df['PROFIT'].astype(str)
         
         # Convert REVENUES, EMPLOYEES, and PROFIT to numeric
         df['REVENUES'] = pd.to_numeric(df['REVENUES'].str.replace(',', ''), errors='coerce').fillna(0)
@@ -44,12 +41,12 @@ df = load_and_clean_data(data_file)
 # Sidebar with logo and description
 st.sidebar.image("logo.png", caption=None)
 st.sidebar.markdown(
-    "This app allows users to explore data on Fortune 500 companies through state comparisons and detailed company comparisons. Gain insights into revenue, profits, and employee distribution."
+    "This app allows users to explore data on Fortune 500 companies through state comparisons, company comparisons, and generate custom insights."
 )
 
 # Streamlit app with tabs
 st.title("Fortune 500 Data Explorer")
-tab1, tab2, tab3 = st.tabs(["State Comparison", "Company Map", "Company Comparison"])
+tab1, tab2, tab3, tab4 = st.tabs(["State Comparison", "Company Map", "Company Comparison", "Interactive Insights"])
 
 # Tab 1: State Comparison
 with tab1:
@@ -148,29 +145,44 @@ with tab3:
     company2 = st.selectbox("Select Second Company", company_list)
     
     # Fetch details for selected companies
-    company_data1 = df[df['NAME'] == company1].iloc[0]
-    company_data2 = df[df['NAME'] == company2].iloc[0]
+    company_data1 = df[df['NAME'] == company1]
+    company_data2 = df[df['NAME'] == company2]
     
-    st.write("### Comparison Summary")
-    col1, col2 = st.columns(2)
+    if not company_data1.empty and not company_data2.empty:
+        st.write("### Comparison Summary")
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.write(f"**{company1}**")
+            st.write(f"Revenue: ${company_data1['REVENUES'].values[0] / 1e9:,.2f} Billion")
+            st.write(f"Profit: ${company_data1['PROFIT'].values[0] / 1e9:,.2f} Billion")
+            st.write(f"Website: [Link]({company_data1['WEBSITE'].values[0]})")
+
+        with col2:
+            st.write(f"**{company2}**")
+            st.write(f"Revenue: ${company_data2['REVENUES'].values[0] / 1e9:,.2f} Billion")
+            st.write(f"Profit: ${company_data2['PROFIT'].values[0] / 1e9:,.2f} Billion")
+            st.write(f"Website: [Link]({company_data2['WEBSITE'].values[0]})")
+    else:
+        st.write("Selected companies not found in the dataset.")
+
+# Tab 4: Interactive Insights
+with tab4:
+    st.subheader("Interactive Insights")
+    metric = st.selectbox("Select Metric", ["Revenue", "Profit", "Employees"])
+    min_value = st.number_input(f"Minimum {metric}", min_value=0, value=0)
+    max_value = st.number_input(f"Maximum {metric}", min_value=0, value=1000000)
     
-    with col1:
-        st.write(f"**{company1}**")
-        st.write(f"Revenue: ${company_data1['REVENUES'] / 1e9:,.2f} Billion")
-        st.write(f"Profit: ${company_data1['PROFIT'] / 1e9:,.2f} Billion")
-        st.write(f"Website: [Link]({company_data1['WEBSITE']})")
-
-    with col2:
-        st.write(f"**{company2}**")
-        st.write(f"Revenue: ${company_data2['REVENUES'] / 1e9:,.2f} Billion")
-        st.write(f"Profit: ${company_data2['PROFIT'] / 1e9:,.2f} Billion")
-        st.write(f"Website: [Link]({company_data2['WEBSITE']})")
-
-    # Bar Graph Comparison
-    comparison_data = pd.DataFrame({
-        "Metric": ["Revenue", "Profit"],
-        company1: [company_data1['REVENUES'] / 1e9, company_data1['PROFIT'] / 1e9],
-        company2: [company_data2['REVENUES'] / 1e9, company_data2['PROFIT'] / 1e9],
-    })
-    fig5 = px.bar(comparison_data, x="Metric", y=[company1, company2], barmode="group", title="Company Comparison")
-    st.plotly_chart(fig5)
+    if metric == "Revenue":
+        filtered_insights = df[(df['REVENUES'] >= min_value) & (df['REVENUES'] <= max_value)]
+    elif metric == "Profit":
+        filtered_insights = df[(df['PROFIT'] >= min_value) & (df['PROFIT'] <= max_value)]
+    else:  # Employees
+        filtered_insights = df[(df['EMPLOYEES'] >= min_value) & (df['EMPLOYEES'] <= max_value)]
+    
+    st.write(f"Filtered Data ({metric}):", filtered_insights)
+    st.write(f"Total Companies: {len(filtered_insights)}")
+    
+    if not filtered_insights.empty:
+        fig6 = px.bar(filtered_insights, x="NAME", y=metric.upper(), title=f"{metric} of Filtered Companies")
+        st.plotly_chart(fig6)
