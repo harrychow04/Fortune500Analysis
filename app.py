@@ -33,6 +33,8 @@ def load_data(file_path):
         if 'EMPLOYEES' in df and df['EMPLOYEES'].dtype == 'object':
             df['EMPLOYEES'] = pd.to_numeric(df['EMPLOYEES'].str.replace(',', ''), errors='coerce').fillna(0)
 
+        # Add a calculated column for revenue per employee
+        df['REVENUE_PER_EMPLOYEE'] = (df['REVENUES'] / df['EMPLOYEES']).fillna(0)
         return df
     except Exception as e:
         st.error(f"Error loading data: {e}")
@@ -102,35 +104,9 @@ with tab2:
     )
     st.plotly_chart(revenue_map, use_container_width=True)
 
-    # Employees Heatmap
-    st.write("### Employees by State")
-    employee_map = px.choropleth(
-        state_aggregates, 
-        locations="STATE", 
-        locationmode="USA-states", 
-        color="EMPLOYEES", 
-        scope="usa", 
-        color_continuous_scale="Plasma",
-        title="Employees by State",
-        labels={"EMPLOYEES": "Employees"},
-        range_color=(0, state_aggregates["EMPLOYEES"].max())
-    )
-    st.plotly_chart(employee_map, use_container_width=True)
-
-    # Profit Heatmap
-    st.write("### Profit by State (In Millions)")
-    profit_map = px.choropleth(
-        state_aggregates, 
-        locations="STATE", 
-        locationmode="USA-states", 
-        color="PROFIT", 
-        scope="usa", 
-        color_continuous_scale="Cividis",
-        title="Profit by State (In Millions)",
-        labels={"PROFIT": "Profit (In Millions)"},
-        range_color=(0, state_aggregates["PROFIT"].max())
-    )
-    st.plotly_chart(profit_map, use_container_width=True)
+    # Dictionary Access (PY5)
+    state_revenue_dict = state_aggregates.set_index('STATE')['REVENUES'].to_dict()
+    st.write(f"State Revenue Dictionary: {state_revenue_dict}")
 
 # [DA6] Company Map Tab
 with tab3:
@@ -169,14 +145,16 @@ with tab4:
         st.write(f"[Website]({row['WEBSITE']})")
         st.write("---")
 
-# [DA8] Interactive Insights Tab with Enhanced Visualizations
+# [DA8] Interactive Insights Tab
 with tab5:
     st.subheader("Investment Insights")
 
     # Select metric and filter data
     metric = st.selectbox("Choose Metric", options=["REVENUES", "PROFIT", "EMPLOYEES"], label_visibility="visible")
     threshold = st.slider(f"Minimum {metric.capitalize()}", min_value=0, max_value=int(df[metric].max()), step=1000)
-    filtered_insights = df[df[metric] >= threshold].sort_values(by=metric, ascending=False)
+
+    # Combined Filtering (DA5)
+    filtered_insights = df[(df[metric] >= threshold) & (df['EMPLOYEES'] > 1000)].sort_values(by=metric, ascending=False)
 
     if not filtered_insights.empty:
         top_company = filtered_insights.iloc[0]
@@ -195,21 +173,12 @@ with tab5:
             st.write(f"- 📊 The **average {metric.capitalize()}** across filtered companies is **${average_metric:,.2f} (In Millions)**.")
             st.write(f"- 🎯 Suggested Threshold for Top Performers: **${suggested_threshold:,.2f} (In Millions)** (Top {100 - percentile}% percentile).")
 
+        # List Comprehension (PY4)
+        company_names = [name for name in filtered_insights['NAME'] if "Inc" in name]
+        st.write(f"List of Companies Containing 'Inc': {company_names}")
+
         # Data Visualizations
         st.write("### Data Visualizations")
-
-        # State-Level Employee Distribution (Bar Chart)
-        if metric == "EMPLOYEES":
-            state_employee_dist = filtered_insights.groupby('STATE')['EMPLOYEES'].sum().sort_values(ascending=False).reset_index()
-            fig_bar = px.bar(
-                state_employee_dist, 
-                x='STATE', 
-                y='EMPLOYEES', 
-                title="Total Employees by State", 
-                labels={'STATE': 'State', 'EMPLOYEES': 'Number of Employees'},
-                text_auto=True
-            )
-            st.plotly_chart(fig_bar, use_container_width=True)
 
         # Top Companies by Metric (Horizontal Bar Chart)
         top_companies = filtered_insights.nlargest(10, metric)
@@ -223,26 +192,6 @@ with tab5:
             text=metric
         )
         st.plotly_chart(fig_hbar, use_container_width=True)
-
-        # Scatterplot (Metric vs. Revenue/Profit/Employees)
-        comparison_metric = st.selectbox(
-            "Choose a Metric for Comparison", options=["PROFIT", "EMPLOYEES", "REVENUES"]
-        )
-        fig_scatter = px.scatter(
-            filtered_insights, 
-            x=metric, 
-            y=comparison_metric, 
-            hover_name="NAME",
-            title=f"{metric.capitalize()} vs {comparison_metric.capitalize()}",
-            labels={metric: metric.capitalize(), comparison_metric: comparison_metric.capitalize()}
-        )
-        st.plotly_chart(fig_scatter, use_container_width=True)
-
-        # Recommendations
-        st.write("### Investment Recommendations")
-        st.write("- Focus on states with high employee counts for potential workforce advantages.")
-        st.write("- Consider whether companies with high employee counts have corresponding high revenues or profits.")
-        st.write(f"- Prioritize companies with {metric.capitalize()} above **{int(suggested_threshold):,}** for top performers.")
     else:
         st.write("No companies match the selected criteria. Try adjusting the threshold or metric.")
 
