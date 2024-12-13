@@ -278,6 +278,15 @@ with tab5:
         # Show the table with company names and corresponding metric values
         top_companies = filtered_insights.nlargest(top_n, metric)[['NAME', metric]].copy()
         top_companies.rename(columns={metric: f"{metric.capitalize()}"}, inplace=True)
+        # Format numeric values for better readability
+        if metric != "EMPLOYEES":
+            top_companies[f"{metric.capitalize()}"] = top_companies[f"{metric.capitalize()}"].apply(
+                lambda x: f"${x:,.2f}"
+            )
+        else:
+            top_companies[f"{metric.capitalize()}"] = top_companies[f"{metric.capitalize()}"].apply(
+                lambda x: f"{x:,}"
+            )
         st.table(top_companies)
 
         # Scatterplot Visualization
@@ -306,8 +315,9 @@ with tab5:
         # Revenue Per Employee Analysis (only for REVENUES)
         if metric == "REVENUES":
             st.write("### Companies with the Highest Revenue per Employee")
-            top_rpe = filtered_insights.nlargest(10, 'REVENUE_PER_EMPLOYEE')[['NAME', 'REVENUE_PER_EMPLOYEE']]
+            top_rpe = filtered_insights.nlargest(10, 'REVENUE_PER_EMPLOYEE')[['NAME', 'REVENUE_PER_EMPLOYEE']].copy()
             top_rpe.rename(columns={'REVENUE_PER_EMPLOYEE': 'Revenue per Employee'}, inplace=True)
+            top_rpe['Revenue per Employee'] = top_rpe['Revenue per Employee'].apply(lambda x: f"${x:,.2f}")
             st.table(top_rpe)
 
         # Financial News Links for Additional Research
