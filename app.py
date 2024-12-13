@@ -16,16 +16,16 @@ import pydeck as pdk
 import plotly.express as px
 import io
 
-# [DA1] Load and Clean the Data
+#[DA1] Load and Clean the Data
 @st.cache_data
 def load_data(file_path):
     try:
         df = pd.read_csv(file_path)
 
-        # Clean column names
+        #Clean column names
         df.columns = df.columns.str.strip()
 
-        # Ensure financial and numeric columns are cleaned
+        #Ensure financial and numeric columns are cleaned
         if 'REVENUES' in df and df['REVENUES'].dtype == 'object':
             df['REVENUES'] = pd.to_numeric(df['REVENUES'].str.replace(',', ''), errors='coerce').fillna(0)
         if 'PROFIT' in df and df['PROFIT'].dtype == 'object':
@@ -33,18 +33,18 @@ def load_data(file_path):
         if 'EMPLOYEES' in df and df['EMPLOYEES'].dtype == 'object':
             df['EMPLOYEES'] = pd.to_numeric(df['EMPLOYEES'].str.replace(',', ''), errors='coerce').fillna(0)
 
-        # Add a calculated column for revenue per employee
+        #Add a calculated column for revenue per employee
         df['REVENUE_PER_EMPLOYEE'] = (df['REVENUES'] / df['EMPLOYEES']).fillna(0)  # [DA9] New Column
         return df
     except Exception as e:
         st.error(f"Error loading data: {e}")
         return pd.DataFrame()
 
-# Load the dataset
+#Load the dataset
 file_path = 'Fortune 500 Corporate Headquarters.csv'
 df = load_data(file_path)
 
-# [DA2] Calculate Summary Metrics
+#[DA2] Calculate Summary Metrics
 def calculate_summary(df):
     if df.empty:
         return 0, 0
@@ -52,27 +52,27 @@ def calculate_summary(df):
     total_employees = df['EMPLOYEES'].sum()
     return total_revenue, total_employees
 
-# Add the Logo
+#Logo
 st.image("logo.png", width=150)
 
-# [DA3] Tabs for Navigation
+#[DA3] Tabs for Navigation
 st.title("Fortune 500 Data Explorer")
 tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
     "Dashboard Overview", "State Comparison", "Company Map", 
     "Company Comparison", "Interactive Insights", "Export Data"
 ])
 
-# [DA4] Dashboard Overview
+#[DA4] Dashboard Overview
 with tab1:
     st.subheader("Dashboard Overview")
 
-    # Summary Cards
+    #Summary Cards
     st.metric(label="Total Companies", value=f"{df['NAME'].nunique()}")
     st.metric(label="Total Revenue (In Millions)", value=f"${df['REVENUES'].sum():,.2f}")
     st.metric(label="Total Employees", value=f"{df['EMPLOYEES'].sum():,}")
 
-    # AI-Generated Insights
-    st.write("### AI-Generated Insights")
+    #Financial Overview
+    st.write("### Financial Overview")
     try:
         top_state = df.groupby('STATE')['REVENUES'].sum().idxmax()
         top_company = df.loc[df['REVENUES'].idxmax()]
@@ -82,14 +82,14 @@ with tab1:
     except Exception as e:
         st.error("Unable to generate insights.")
 
-# [DA5] State Comparison Tab
+#[DA5] State Comparison Tab
 with tab2:
     st.subheader("State Comparison")
 
-    # Aggregated Data for Heatmaps
+    #Aggregated Data for Heatmaps
     state_aggregates = df.groupby('STATE')[['REVENUES', 'PROFIT', 'EMPLOYEES']].sum().reset_index()
 
-    # Revenue Heatmap
+    #Revenue Heatmap
     st.write("### Revenue by State (In Millions)")
     revenue_map = px.choropleth(
         state_aggregates, 
@@ -104,7 +104,7 @@ with tab2:
     )
     st.plotly_chart(revenue_map, use_container_width=True)
 
-    # Employees Heatmap
+    #Employees Heatmap
     st.write("### Employees by State")
     employee_map = px.choropleth(
         state_aggregates, 
@@ -119,7 +119,7 @@ with tab2:
     )
     st.plotly_chart(employee_map, use_container_width=True)
 
-    # Profit Heatmap
+    #Profit Heatmap
     st.write("### Profit by State (In Millions)")
     profit_map = px.choropleth(
         state_aggregates, 
@@ -134,15 +134,15 @@ with tab2:
     )
     st.plotly_chart(profit_map, use_container_width=True)
 
-# [DA6] Company Map Tab
+#[DA6] Company Map Tab
 with tab3:
     st.subheader("Company Headquarters Map")
 
-    # State Filter
+    #State Filter
     state_filter = st.selectbox("Filter by State", options=["All States"] + sorted(df['STATE'].unique()))
     filtered_df = df if state_filter == "All States" else df[df['STATE'] == state_filter]
 
-    # Display Map
+    #Display Map
     try:
         layer = pdk.Layer(
             "ScatterplotLayer",
@@ -158,7 +158,7 @@ with tab3:
     except Exception as e:
         st.error(f"An error occurred: {e}")
 
-# [DA7] Company Comparison Tab
+#[DA7] Company Comparison Tab
 with tab4:
     st.subheader("Company Comparison")
     selected_companies = st.multiselect("Select Companies", options=df['NAME'].unique())
@@ -171,11 +171,11 @@ with tab4:
         st.write(f"[Website]({row['WEBSITE']})")
         st.write("---")
 
-# [DA8] Interactive Insights Tab
+#[DA8] Interactive Insights Tab
 with tab5:
     st.subheader("Investment Insights")
 
-    # Select metric and filter data
+    #Select metric and filter data
     metric = st.selectbox("Choose Metric", options=["REVENUES", "PROFIT", "EMPLOYEES"], label_visibility="visible")
     threshold = st.slider(f"Minimum {metric.capitalize()}", min_value=0, max_value=int(df[metric].max()), step=1000)
     filtered_insights = df[df[metric] >= threshold].sort_values(by=metric, ascending=False)
@@ -186,16 +186,16 @@ with tab5:
         percentile = st.slider("Choose Percentile for Threshold Suggestion", min_value=0, max_value=100, step=5, value=75)
         suggested_threshold = filtered_insights[metric].quantile(percentile / 100)
 
-        # Key Metrics for Investors
+        #Key Metrics for Investors
         st.write("### Key Metrics for Investors")
         st.write(f"- 🏆 **Top Company**: {top_company['NAME']} with a {metric.capitalize()} of **${top_company[metric]:,.2f}**.")
         st.write(f"- 📊 The **average {metric.capitalize()}** across filtered companies is **${average_metric:,.2f}**.")
         st.write(f"- 🎯 Suggested Threshold for Top Performers: **${suggested_threshold:,.2f}** (Top {100 - percentile}% percentile).")
 
-        # Data Visualizations
+        #Data Visualizations
         st.write("### Data Visualizations")
 
-        # Top Companies by Metric (Horizontal Bar Chart)
+        #Top Companies by Metric (Horizontal Bar Chart)
         top_companies = filtered_insights.nlargest(10, metric)
         fig_hbar = px.bar(
             top_companies, 
@@ -208,7 +208,12 @@ with tab5:
         )
         st.plotly_chart(fig_hbar, use_container_width=True)
 
-        # Links to Financial News Resources
+        #Alternative List Comprehension [PY4]
+        companies_above_average = [name for name, revenue in zip(filtered_insights['NAME'], filtered_insights[metric]) if revenue > average_metric]
+        st.write(f"Companies with {metric.capitalize()} above average: {companies_above_average}")
+
+
+        #Links to Financial News Resources
         st.write("### Explore More Financial Insights")
         st.markdown("""
         - [Yahoo Finance](https://finance.yahoo.com)
@@ -219,7 +224,7 @@ with tab5:
     else:
         st.write("No companies match the selected criteria. Try adjusting the threshold or metric.")
 
-# [DA9] Export Data Tab
+#[DA9] Export Data Tab
 with tab6:
     st.subheader("Export Data")
     buffer = io.StringIO()
