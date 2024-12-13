@@ -171,49 +171,54 @@ with tab4:
         st.write(f"[Website]({row['WEBSITE']})")
         st.write("---")
 
-#[DA8] Interactive Insights Tab
+# [DA8] Interactive Insights Tab
 with tab5:
     st.subheader("Investment Insights")
 
-    #Select metric and filter data
+    # Select metric and filter data
     metric = st.selectbox("Choose Metric", options=["REVENUES", "PROFIT", "EMPLOYEES"], label_visibility="visible")
     threshold = st.slider(f"Minimum {metric.capitalize()}", min_value=0, max_value=int(df[metric].max()), step=1000)
     filtered_insights = df[df[metric] >= threshold].sort_values(by=metric, ascending=False)
 
     if not filtered_insights.empty:
+        # Key Metrics
         top_company = filtered_insights.iloc[0]
         average_metric = filtered_insights[metric].mean()
-        percentile = st.slider("Choose Percentile for Threshold Suggestion", min_value=0, max_value=100, step=5, value=75)
-        suggested_threshold = filtered_insights[metric].quantile(percentile / 100)
-
-        #Key Metrics for Investors
-        st.write("### Key Metrics for Investors")
+        st.write(f"### Top {metric.capitalize()} Insights")
         st.write(f"- 🏆 **Top Company**: {top_company['NAME']} with a {metric.capitalize()} of **${top_company[metric]:,.2f}**.")
-        st.write(f"- 📊 The **average {metric.capitalize()}** across filtered companies is **${average_metric:,.2f}**.")
-        st.write(f"- 🎯 Suggested Threshold for Top Performers: **${suggested_threshold:,.2f}** (Top {100 - percentile}% percentile).")
+        st.write(f"- 📊 Average {metric.capitalize()}: **${average_metric:,.2f}**")
 
-        #Data Visualizations
-        st.write("### Data Visualizations")
+        # Benchmarking
+        state_averages = df.groupby('STATE')[metric].mean()
+        selected_state = st.selectbox("Select State for Benchmarking", options=state_averages.index)
+        state_average = state_averages[selected_state]
+        st.write(f"📍 Average {metric.capitalize()} in {selected_state}: ${state_average:,.2f}")
 
-        #Top Companies by Metric (Horizontal Bar Chart)
-        top_companies = filtered_insights.nlargest(10, metric)
-        fig_hbar = px.bar(
-            top_companies, 
-            x=metric, 
-            y='NAME', 
-            orientation='h', 
-            title=f"Top 10 Companies by {metric.capitalize()}",
-            labels={metric: metric.capitalize(), 'NAME': 'Company'},
-            text=metric
+        # Display Companies Above Threshold
+        st.write(f"### Companies with {metric.capitalize()} Above {threshold:,}")
+        for company, value in zip(filtered_insights['NAME'], filtered_insights[metric]):
+            st.write(f"- **{company}**: {metric.capitalize()} = ${value:,.2f}")
+
+        # Scatterplot
+        comparison_metric = st.selectbox(
+            "Compare Against Another Metric", options=["REVENUES", "PROFIT", "EMPLOYEES"]
         )
-        st.plotly_chart(fig_hbar, use_container_width=True)
+        fig_scatter = px.scatter(
+            filtered_insights, 
+            x=metric, 
+            y=comparison_metric, 
+            hover_name="NAME",
+            title=f"{metric.capitalize()} vs {comparison_metric.capitalize()}",
+            labels={metric: metric.capitalize(), comparison_metric: comparison_metric.capitalize()}
+        )
+        st.plotly_chart(fig_scatter, use_container_width=True)
 
-        #Alternative List Comprehension [PY4]
-        companies_above_average = [name for name, revenue in zip(filtered_insights['NAME'], filtered_insights[metric]) if revenue > average_metric]
-        st.write(f"Companies with {metric.capitalize()} above average: {companies_above_average}")
+        # Revenue Per Employee Analysis
+        st.write("### Companies with the Highest Revenue per Employee")
+        top_rpe = df.nlargest(10, 'REVENUE_PER_EMPLOYEE')[['NAME', 'REVENUE_PER_EMPLOYEE']]
+        st.table(top_rpe)
 
-
-        #Links to Financial News Resources
+        # Financial News Links
         st.write("### Explore More Financial Insights")
         st.markdown("""
         - [Yahoo Finance](https://finance.yahoo.com)
@@ -221,8 +226,12 @@ with tab5:
         - [Google Finance](https://www.google.com/finance)
         """)
 
+        # Recommendations
+        st.write("### Recommendations")
+        st.write(f"- Focus on companies with {metric.capitalize()} above ${threshold:,}.")
+        st.write("- Prioritize companies with high revenue per employee.")
     else:
-        st.write("No companies match the selected criteria. Try adjusting the threshold or metric.")
+        st.write(f"No companies match the selected criteria of {metric.capitalize()} above {threshold:,}.")
 
 #[DA9] Export Data Tab
 with tab6:
