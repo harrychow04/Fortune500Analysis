@@ -89,6 +89,15 @@ with tab2:
     # Aggregated Data for Heatmaps
     state_aggregates = df.groupby('STATE')[['REVENUES', 'PROFIT', 'EMPLOYEES']].sum().reset_index()
 
+    # Create dictionary for state revenues [PY5]
+    state_revenue_dict = state_aggregates.set_index('STATE')['REVENUES'].to_dict()
+
+    # Example Use: Highlight the state with the highest revenue
+    top_revenue_state = max(state_revenue_dict, key=state_revenue_dict.get)
+    top_revenue_value = state_revenue_dict[top_revenue_state]
+
+    st.write(f"🚩 **State with the highest revenue**: {top_revenue_state} (${top_revenue_value:,.2f}).")
+
     # Revenue Heatmap
     st.write("### Revenue by State (In Millions)")
     revenue_map = px.choropleth(
@@ -104,9 +113,35 @@ with tab2:
     )
     st.plotly_chart(revenue_map, use_container_width=True)
 
-    # Dictionary Access [PY5]
-    state_revenue_dict = state_aggregates.set_index('STATE')['REVENUES'].to_dict()
-    st.write(f"State Revenue Dictionary: {state_revenue_dict}")
+    # Employees Heatmap
+    st.write("### Employees by State")
+    employee_map = px.choropleth(
+        state_aggregates, 
+        locations="STATE", 
+        locationmode="USA-states", 
+        color="EMPLOYEES", 
+        scope="usa", 
+        color_continuous_scale="Plasma",
+        title="Employees by State",
+        labels={"EMPLOYEES": "Employees"},
+        range_color=(0, state_aggregates["EMPLOYEES"].max())
+    )
+    st.plotly_chart(employee_map, use_container_width=True)
+
+    # Profit Heatmap
+    st.write("### Profit by State (In Millions)")
+    profit_map = px.choropleth(
+        state_aggregates, 
+        locations="STATE", 
+        locationmode="USA-states", 
+        color="PROFIT", 
+        scope="usa", 
+        color_continuous_scale="Cividis",
+        title="Profit by State (In Millions)",
+        labels={"PROFIT": "Profit (In Millions)"},
+        range_color=(0, state_aggregates["PROFIT"].max())
+    )
+    st.plotly_chart(profit_map, use_container_width=True)
 
 # [DA6] Company Map Tab
 with tab3:
@@ -152,9 +187,7 @@ with tab5:
     # Select metric and filter data
     metric = st.selectbox("Choose Metric", options=["REVENUES", "PROFIT", "EMPLOYEES"], label_visibility="visible")
     threshold = st.slider(f"Minimum {metric.capitalize()}", min_value=0, max_value=int(df[metric].max()), step=1000)
-
-    # Combined Filtering [DA5]
-    filtered_insights = df[(df[metric] >= threshold) & (df['EMPLOYEES'] > 1000)].sort_values(by=metric, ascending=False)
+    filtered_insights = df[df[metric] >= threshold].sort_values(by=metric, ascending=False)
 
     if not filtered_insights.empty:
         top_company = filtered_insights.iloc[0]
