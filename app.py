@@ -143,13 +143,29 @@ with tab3:
     state_filter = st.selectbox("Filter by State", options=["All States"] + sorted(df['STATE'].unique()))
     filtered_df = df if state_filter == "All States" else df[df['STATE'] == state_filter]
 
+    # Toggle for revenue-based colorization
+    color_toggle = st.checkbox("Colorize by Revenue")
+
+    # Determine dot colors
+    if color_toggle:
+        # Map revenue values to a gradient scale
+        max_revenue = filtered_df['REVENUE'].max()
+        min_revenue = filtered_df['REVENUE'].min()
+        filtered_df['COLOR'] = filtered_df['REVENUE'].apply(
+            lambda rev: [255, int(255 * (rev - min_revenue) / (max_revenue - min_revenue)), 0]
+        )
+    else:
+        # Default color (red)
+        filtered_df['COLOR'] = [[255, 0, 0] for _ in range(len(filtered_df))]
+
     # Display Map
     try:
         # Create a tooltip to display company name and full address (Street, City, State)
         tooltip = {
             "html": """
                 <b>Company:</b> {NAME}<br>
-                <b>Address:</b> {ADDRESS}, {CITY}, {STATE}
+                <b>Address:</b> {ADDRESS}, {CITY}, {STATE}<br>
+                <b>Revenue:</b> {REVENUE}
             """,
             "style": {
                 "backgroundColor": "steelblue",
@@ -166,7 +182,7 @@ with tab3:
             data=filtered_df,
             get_position=["LONGITUDE", "LATITUDE"],
             get_radius=st.slider("Dot Size", min_value=1000, max_value=50000, value=30000),
-            get_fill_color=[255, 0, 0],
+            get_fill_color="COLOR",
             pickable=True
         )
 
