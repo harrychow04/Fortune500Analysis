@@ -143,29 +143,42 @@ with tab3:
     state_filter = st.selectbox("Filter by State", options=["All States"] + sorted(df['STATE'].unique()))
     filtered_df = df if state_filter == "All States" else df[df['STATE'] == state_filter]
 
-    # Toggle for revenue-based colorization
-    color_toggle = st.checkbox("Colorize by Revenue")
+    # Colorize By Options
+    colorize_by = st.radio("Colorize By", options=["None", "Revenues", "Employees", "Profit"])
 
-    # Determine dot colors
-    if color_toggle:
-        # Map revenue values to a gradient scale
-        max_revenue = filtered_df['REVENUE'].max()
-        min_revenue = filtered_df['REVENUE'].min()
-        filtered_df['COLOR'] = filtered_df['REVENUE'].apply(
-            lambda rev: [255, int(255 * (rev - min_revenue) / (max_revenue - min_revenue)), 0]
+    # Determine dot colors based on selected option
+    if colorize_by == "Revenues" and "REVENUES" in filtered_df.columns:
+        max_value = filtered_df['REVENUES'].max()
+        min_value = filtered_df['REVENUES'].min()
+        filtered_df['COLOR'] = filtered_df['REVENUES'].apply(
+            lambda rev: [255, int(255 * (rev - min_value) / (max_value - min_value)), 0]
+        )
+    elif colorize_by == "Employees" and "EMPLOYEES" in filtered_df.columns:
+        max_value = filtered_df['EMPLOYEES'].max()
+        min_value = filtered_df['EMPLOYEES'].min()
+        filtered_df['COLOR'] = filtered_df['EMPLOYEES'].apply(
+            lambda emp: [0, int(255 * (emp - min_value) / (max_value - min_value)), 255]
+        )
+    elif colorize_by == "Profit" and "PROFIT" in filtered_df.columns:
+        max_value = filtered_df['PROFIT'].max()
+        min_value = filtered_df['PROFIT'].min()
+        filtered_df['COLOR'] = filtered_df['PROFIT'].apply(
+            lambda profit: [int(255 * (profit - min_value) / (max_value - min_value)), 0, 255]
         )
     else:
-        # Default color (red)
+        # Default color (red) when no colorization is selected
         filtered_df['COLOR'] = [[255, 0, 0] for _ in range(len(filtered_df))]
 
     # Display Map
     try:
-        # Create a tooltip to display company name and full address (Street, City, State)
+        # Create a tooltip to display company name, address, and selected metric
         tooltip = {
             "html": """
                 <b>Company:</b> {NAME}<br>
                 <b>Address:</b> {ADDRESS}, {CITY}, {STATE}<br>
-                <b>Revenue:</b> {REVENUE}
+                <b>Employees:</b> {EMPLOYEES}<br>
+                <b>Revenues:</b> {REVENUES}<br>
+                <b>Profit:</b> {PROFIT}
             """,
             "style": {
                 "backgroundColor": "steelblue",
