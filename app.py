@@ -169,7 +169,7 @@ with tab4:
         st.write(f"[Website]({row['WEBSITE']})")
         st.write("---")
 
-# [DA8] Interactive Insights Tab with Enhanced Visualizations
+# [DA8] Interactive Insights Tab
 with tab5:
     st.subheader("Investment Insights")
 
@@ -241,4 +241,14 @@ with tab5:
         # Recommendations
         st.write("### Investment Recommendations")
         st.write("- Focus on states with high employee counts for potential workforce advantages.")
-        st.write("- Consider whether companies with high employee counts have
+        st.write("- Consider whether companies with high employee counts have corresponding high revenues or profits.")
+        st.write(f"- Prioritize companies with {metric.capitalize()} above **{int(suggested_threshold):,}** for top performers.")
+    else:
+        st.write("No companies match the selected criteria. Try adjusting the threshold or metric.")
+
+# [DA9] Export Data Tab
+with tab6:
+    st.subheader("Export Data")
+    buffer = io.StringIO()
+    df.to_csv(buffer, index=False)
+    st.download_button("Download Full Dataset", data=buffer.getvalue(), file_name="fortune500_data.csv", mime="text/csv")
