@@ -7,18 +7,6 @@ URL:        Link to your web application on Streamlit Cloud (if posted)
 Description:    
 This app allows users to explore data on Fortune 500 companies through state comparisons and detailed company comparisons. Gain insights into revenue, profits, and employee distribution.
 """
-"""
-Name:       Your Name
-CS230:      Section XXX
-Data:       Fortune 500 Corporate Headquarters
-URL:        Link to your web application on Streamlit Cloud (if hosted)
-
-Description:
-This program provides an interactive data explorer for Fortune 500 companies. It includes
-visualizations such as heatmaps, bar charts, and a company headquarters map, along with
-interactive insights based on user inputs. Additional features like AI-powered insights,
-industry analysis, and export functionality are included.
-"""
 
 import pandas as pd
 import streamlit as st
