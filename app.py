@@ -8,14 +8,13 @@ Description:
 This app allows users to explore data on Fortune 500 companies through state comparisons and detailed company comparisons. Gain insights into revenue, profits, and employee distribution.
 """
 
-import pandas as pd
 import streamlit as st
+st.set_page_config(page_title="Fortune 500 Data Explorer", layout="wide")
+
+import pandas as pd
 import pydeck as pdk
 import plotly.express as px
 import io
-
-# Set Page Configuration
-st.set_page_config(page_title="Fortune 500 Data Explorer", layout="wide")
 
 # [DA1] Load and Clean the Data
 @st.cache_data
