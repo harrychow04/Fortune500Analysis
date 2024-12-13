@@ -12,20 +12,26 @@ import streamlit as st
 import pydeck as pdk
 import plotly.express as px
 
+# Set the page configuration (must be the first Streamlit command)
+st.set_page_config(page_title="Fortune 500 Data Explorer", layout="wide")
+
 # [DA1] Load and Clean the Data
 @st.cache_data
 def load_data(file_path):
     try:
         # Load the dataset
         df = pd.read_csv(file_path)
-        
+
         # Clean column names
         df.columns = df.columns.str.strip()  # Remove leading/trailing spaces
         
-        # Ensure columns are treated as numeric
-        df['REVENUES'] = pd.to_numeric(df['REVENUES'].str.replace(',', ''), errors='coerce').fillna(0)
-        df['PROFIT'] = pd.to_numeric(df['PROFIT'].str.replace(',', ''), errors='coerce').fillna(0)
-        df['EMPLOYEES'] = pd.to_numeric(df['EMPLOYEES'].str.replace(',', ''), errors='coerce').fillna(0)
+        # Ensure string operations are applied correctly
+        if 'REVENUES' in df and df['REVENUES'].dtype == 'object':
+            df['REVENUES'] = pd.to_numeric(df['REVENUES'].str.replace(',', ''), errors='coerce').fillna(0)
+        if 'PROFIT' in df and df['PROFIT'].dtype == 'object':
+            df['PROFIT'] = pd.to_numeric(df['PROFIT'].str.replace(',', ''), errors='coerce').fillna(0)
+        if 'EMPLOYEES' in df and df['EMPLOYEES'].dtype == 'object':
+            df['EMPLOYEES'] = pd.to_numeric(df['EMPLOYEES'].str.replace(',', ''), errors='coerce').fillna(0)
         
         return df
     except Exception as e:
@@ -43,9 +49,6 @@ def calculate_summary(df):
     total_revenue = df['REVENUES'].sum()  # Total revenue
     total_employees = df['EMPLOYEES'].sum()  # Total employees
     return total_revenue, total_employees
-
-# Begin Streamlit App
-st.set_page_config(page_title="Fortune 500 Data Explorer", layout="wide")
 
 # Add the Logo
 st.image("logo.png", width=150)
