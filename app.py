@@ -145,26 +145,30 @@ with tab3:
 
     # Colorize By Options
     colorize_by = st.radio("Colorize By", options=["None", "Revenues", "Employees", "Profit"])
-    
+
+    # Determine dot colors based on selected option
     try:
         if colorize_by == "Revenues" and "REVENUES" in filtered_df.columns:
             max_value = filtered_df['REVENUES'].max()
             min_value = filtered_df['REVENUES'].min()
-            range_value = max_value - min_value if max_value != min_value else 1  # Prevent division by zero
+            st.write(f"Revenues Range: Min = {min_value}, Max = {max_value}")  # Debug
+            range_value = max_value - min_value if max_value != min_value else 1
             filtered_df['COLOR'] = filtered_df['REVENUES'].apply(
                 lambda rev: [255, int(255 * (rev - min_value) / range_value), 0]
             )
         elif colorize_by == "Employees" and "EMPLOYEES" in filtered_df.columns:
             max_value = filtered_df['EMPLOYEES'].max()
             min_value = filtered_df['EMPLOYEES'].min()
-            range_value = max_value - min_value if max_value != min_value else 1  # Prevent division by zero
+            st.write(f"Employees Range: Min = {min_value}, Max = {max_value}")  # Debug
+            range_value = max_value - min_value if max_value != min_value else 1
             filtered_df['COLOR'] = filtered_df['EMPLOYEES'].apply(
                 lambda emp: [0, int(255 * (emp - min_value) / range_value), 255]
             )
         elif colorize_by == "Profit" and "PROFIT" in filtered_df.columns:
             max_value = filtered_df['PROFIT'].max()
             min_value = filtered_df['PROFIT'].min()
-            range_value = max_value - min_value if max_value != min_value else 1  # Prevent division by zero
+            st.write(f"Profit Range: Min = {min_value}, Max = {max_value}")  # Debug
+            range_value = max_value - min_value if max_value != min_value else 1
             filtered_df['COLOR'] = filtered_df['PROFIT'].apply(
                 lambda profit: [int(255 * (profit - min_value) / range_value), 0, 255]
             )
