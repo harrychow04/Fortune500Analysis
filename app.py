@@ -231,11 +231,16 @@ with tab5:
     st.subheader("Investment Insights")
 
     # Select Metric and Set Threshold
-    metric = st.selectbox("Choose a Metric to Analyze", options=["REVENUES", "PROFIT", "EMPLOYEES"])
+    metric = st.selectbox(
+        "Choose a Metric to Analyze", 
+        options=["REVENUES", "PROFIT", "EMPLOYEES"], 
+        help="Select a metric to filter and analyze companies based on revenues, profit, or number of employees."
+    )
     threshold = st.slider(
         f"Filter Companies by Minimum {metric.capitalize()}",
         min_value=0, max_value=int(df[metric].max()), step=1000,
-        value=int(df[metric].mean())  # Default to the average
+        value=int(df[metric].median()),  # Default to the median for a balanced threshold
+        help=f"Set a minimum value for {metric.capitalize()} to focus on top-performing companies."
     )
 
     # Filter Companies Based on Metric and Threshold
@@ -247,40 +252,54 @@ with tab5:
         top_company = filtered_insights.iloc[0]
         average_metric = filtered_insights[metric].mean()
 
-        # Format values based on metric type
+        # Format values for display
         if metric == "EMPLOYEES":
-            metric_format = "{:,}"  # Comma-separated integers for employees
+            metric_format = "{:,}"  
             metric_unit = "Employees"
         else:
-            metric_format = "${:,.2f}"  # Monetary values for revenues and profit
+            metric_format = "${:,.2f}"  
             metric_unit = "USD"
 
-        st.write(f"- 🏆 **Top Company**: {top_company['NAME']} with {metric.capitalize()} = {metric_format.format(top_company[metric])}.")
-        st.write(f"- 📊 **Average {metric.capitalize()}** across selected companies: {metric_format.format(average_metric)}.")
-        st.write(f"- 🔢 **Total Companies Above Threshold**: {len(filtered_insights)}.")
+        # Display key metrics and insights
+        st.markdown(f"""
+        - 🏆 **Top Company**: **{top_company['NAME']}** with {metric.capitalize()} = {metric_format.format(top_company[metric])}.
+        - 📊 **Average {metric.capitalize()}** across selected companies: {metric_format.format(average_metric)}.
+        - 🔢 **Total Companies Above Threshold**: {len(filtered_insights)}.
+        """)
 
         # Display Top Companies
-        top_n = st.slider("Show Top N Companies", min_value=5, max_value=20, step=1, value=10)
+        top_n = st.slider(
+            "Show Top N Companies",
+            min_value=5, max_value=20, step=1, value=10,
+            help="Select the number of top companies to display in the table below."
+        )
         st.write(f"### Top {top_n} Companies by {metric.capitalize()}")
-        st.table(filtered_insights.head(top_n)[['NAME', metric]])
+        
+        # Show the table with company names and corresponding metric values
+        top_companies = filtered_insights.nlargest(top_n, metric)[['NAME', metric]].copy()
+        top_companies.rename(columns={metric: f"{metric.capitalize()}"}, inplace=True)
+        st.table(top_companies)
 
         # Scatterplot Visualization
         comparison_metric = st.selectbox(
-            "Compare Against Another Metric", options=["REVENUES", "PROFIT", "EMPLOYEES"]
+            "Compare Against Another Metric", 
+            options=["REVENUES", "PROFIT", "EMPLOYEES"],
+            help="Choose a second metric to analyze its relationship with the primary metric."
         )
         st.write(f"### {metric.capitalize()} vs. {comparison_metric.capitalize()} (Scatterplot)")
 
-        # Ensure proper formatting for scatterplot based on numeric values
+        # Create scatterplot visualization
         fig_scatter = px.scatter(
-            filtered_insights, 
-            x=metric, 
-            y=comparison_metric, 
+            filtered_insights,
+            x=metric,
+            y=comparison_metric,
             hover_name="NAME",
             title=f"{metric.capitalize()} vs {comparison_metric.capitalize()}",
             labels={
                 metric: metric.capitalize(),
                 comparison_metric: comparison_metric.capitalize(),
-            }
+            },
+            template="plotly_dark"  
         )
         st.plotly_chart(fig_scatter, use_container_width=True)
 
@@ -288,9 +307,10 @@ with tab5:
         if metric == "REVENUES":
             st.write("### Companies with the Highest Revenue per Employee")
             top_rpe = filtered_insights.nlargest(10, 'REVENUE_PER_EMPLOYEE')[['NAME', 'REVENUE_PER_EMPLOYEE']]
+            top_rpe.rename(columns={'REVENUE_PER_EMPLOYEE': 'Revenue per Employee'}, inplace=True)
             st.table(top_rpe)
 
-        # Financial News Links
+        # Financial News Links for Additional Research
         st.write("### Explore More Financial Insights")
         st.markdown("""
         - [Yahoo Finance](https://finance.yahoo.com)
@@ -300,12 +320,15 @@ with tab5:
 
         # Recommendations Section
         st.write("### Recommendations")
-        st.write(f"- Focus on companies with {metric.capitalize()} above {metric_format.format(threshold)}.")
+        st.markdown(f"""
+        - Focus on companies with **{metric.capitalize()}** above {metric_format.format(threshold)}.
+        - Identify companies with consistent performance in both **{metric.capitalize()}** and **{comparison_metric.capitalize()}**.
+        """)
         if metric == "REVENUES" and 'REVENUE_PER_EMPLOYEE' in df.columns:
-            st.write("- Prioritize companies with high revenue per employee for better operational efficiency.")
+            st.write("- Prioritize companies with high revenue per employee for operational efficiency.")
     else:
-        st.write(f"No companies match the criteria of {metric.capitalize()} above {threshold:,}.")
-        st.write(f"No companies match the selected criteria of {metric.capitalize()} above {threshold:,}.")
+        # Handle the case where no companies meet the threshold
+        st.warning(f"No companies match the criteria of {metric.capitalize()} above {metric_format.format(threshold)}.")
 
 #[DA9] Export Data Tab
 with tab6:
