@@ -169,13 +169,13 @@ with tab4:
         st.write(f"[Website]({row['WEBSITE']})")
         st.write("---")
 
-# [DA8] Interactive Insights Tab with Financial Resources
+# [DA8] Interactive Insights Tab with Enhanced Visualizations
 with tab5:
     st.subheader("Investment Insights")
 
     # Select metric and filter data
     metric = st.selectbox("Choose Metric", options=["REVENUES", "PROFIT", "EMPLOYEES"], label_visibility="visible")
-    threshold = st.slider(f"Minimum {metric.capitalize()} (In Millions)", min_value=0, max_value=int(df[metric].max()), step=1000)
+    threshold = st.slider(f"Minimum {metric.capitalize()}", min_value=0, max_value=int(df[metric].max()), step=1000)
     filtered_insights = df[df[metric] >= threshold].sort_values(by=metric, ascending=False)
 
     if not filtered_insights.empty:
@@ -186,58 +186,65 @@ with tab5:
 
         # Key Metrics for Investors
         st.write("### Key Metrics for Investors")
-        st.write(f"- 🏆 **Top Company**: {top_company['NAME']} with a {metric.capitalize()} of **${top_company[metric]:,.2f} (In Millions)**.")
-        st.write(f"- 📊 The **average {metric.capitalize()}** across filtered companies is **${average_metric:,.2f} (In Millions)**.")
-        st.write(f"- 🎯 Suggested Threshold for Top Performers: **${suggested_threshold:,.2f} (In Millions)** (Top {100 - percentile}% percentile).")
+        if metric == "EMPLOYEES":
+            st.write(f"- 🏆 **Top Company**: {top_company['NAME']} with **{top_company[metric]:,} Employees**.")
+            st.write(f"- 📊 The **average Employees** across filtered companies is **{int(average_metric):,}**.")
+            st.write(f"- 🎯 Suggested Threshold for Top Performers: **{int(suggested_threshold):,} Employees** (Top {100 - percentile}% percentile).")
+        else:
+            st.write(f"- 🏆 **Top Company**: {top_company['NAME']} with a {metric.capitalize()} of **${top_company[metric]:,.2f} (In Millions)**.")
+            st.write(f"- 📊 The **average {metric.capitalize()}** across filtered companies is **${average_metric:,.2f} (In Millions)**.")
+            st.write(f"- 🎯 Suggested Threshold for Top Performers: **${suggested_threshold:,.2f} (In Millions)** (Top {100 - percentile}% percentile).")
 
-        # Financial Resource Links
-        st.write("### Explore More Financial Insights")
-        st.markdown(f"""
-        - [Yahoo Finance](https://finance.yahoo.com)
-        - [Google Finance](https://www.google.com/finance)
-        - [Bloomberg](https://www.bloomberg.com)
-        """)
+        # Additional Visualizations
+        st.write("### Additional Visualizations")
 
-        # Top Performing States
-        st.write("### Top Performing States")
-        top_states = filtered_insights.groupby('STATE')[metric].sum().sort_values(ascending=False).head(3)
-        for state, value in top_states.items():
-            st.write(f"- **{state}**: ${value:,.2f} (In Millions)")
+        # State-Level Employee Distribution (Bar Chart)
+        if metric == "EMPLOYEES":
+            state_employee_dist = filtered_insights.groupby('STATE')['EMPLOYEES'].sum().sort_values(ascending=False).reset_index()
+            fig_bar = px.bar(
+                state_employee_dist, 
+                x='STATE', 
+                y='EMPLOYEES', 
+                title="Total Employees by State", 
+                labels={'STATE': 'State', 'EMPLOYEES': 'Number of Employees'},
+                text_auto=True
+            )
+            st.plotly_chart(fig_bar, use_container_width=True)
 
-        # Risk Indicators
-        st.write("### Risk Indicators")
-        loss_states = df[df['PROFIT'] < 0].groupby('STATE').size().sort_values(ascending=False).head(3)
-        if not loss_states.empty:
-            st.write(f"⚠️ **States with Most Loss-Making Companies**:")
-            for state, count in loss_states.items():
-                st.write(f"- **{state}**: {count} companies")
+        # Top Companies by Metric (Horizontal Bar Chart)
+        top_companies = filtered_insights.nlargest(10, metric)
+        fig_hbar = px.bar(
+            top_companies, 
+            x=metric, 
+            y='NAME', 
+            orientation='h', 
+            title=f"Top 10 Companies by {metric.capitalize()}",
+            labels={metric: metric.capitalize(), 'NAME': 'Company'},
+            text=metric
+        )
+        st.plotly_chart(fig_hbar, use_container_width=True)
 
-        # Investment Recommendations
-        st.write("### Investment Recommendations")
-        st.write("- Focus on **states** with high total revenues or profits for potential growth opportunities.")
-        st.write(f"- Avoid over-concentrating investments in states with high numbers of loss-making companies.")
-        st.write(f"- Prioritize companies with {metric.capitalize()} above **${suggested_threshold:,.2f} (In Millions)**.")
-
-        # Dynamic Comparison Chart
-        comparison_metric = st.selectbox("Choose a Metric for Comparison", options=["PROFIT", "EMPLOYEES", "REVENUES"])
-        comparison_fig = px.scatter(
+        # Scatterplot (Metric vs. Revenue/Profit/Employees)
+        comparison_metric = st.selectbox(
+            "Choose a Metric for Comparison", options=["PROFIT", "EMPLOYEES", "REVENUES"]
+        )
+        fig_scatter = px.scatter(
             filtered_insights, 
             x=metric, 
             y=comparison_metric, 
             hover_name="NAME",
             title=f"{metric.capitalize()} vs {comparison_metric.capitalize()}",
-            labels={metric: f"{metric.capitalize()} (In Millions)", comparison_metric: f"{comparison_metric.capitalize()} (In Millions)"}
+            labels={metric: metric.capitalize(), comparison_metric: comparison_metric.capitalize()}
         )
-        comparison_fig.add_hline(
-            y=average_metric, line_dash="dash", line_color="green", annotation_text=f"Average {metric.capitalize()}"
-        )
-        comparison_fig.add_hline(
-            y=suggested_threshold, line_dash="dot", line_color="blue", annotation_text=f"Top {100 - percentile}% Threshold"
-        )
-        st.plotly_chart(comparison_fig, use_container_width=True)
+        st.plotly_chart(fig_scatter, use_container_width=True)
+
+        # Recommendations
+        st.write("### Investment Recommendations")
+        st.write("- Focus on states with high employee counts for potential workforce advantages.")
+        st.write("- Consider whether companies with high employee counts have corresponding high revenues or profits.")
+        st.write(f"- Prioritize companies with {metric.capitalize()} above **{int(suggested_threshold):,}** for top performers.")
     else:
         st.write("No companies match the selected criteria. Try adjusting the threshold or metric.")
-
 
 # [DA9] Export Data Tab
 with tab6:
