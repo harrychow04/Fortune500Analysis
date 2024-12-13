@@ -17,128 +17,147 @@ import plotly.express as px
 def load_and_clean_data(filepath):
     try:
         df = pd.read_csv(filepath)
-        # Ensure numeric conversion for financial columns
-        df['REVENUES'] = pd.to_numeric(df['REVENUES'].str.replace(',', ''), errors='coerce').fillna(0)
-        df['PROFIT'] = pd.to_numeric(df['PROFIT'].str.replace(',', ''), errors='coerce').fillna(0)
-        df['EMPLOYEES'] = pd.to_numeric(df['EMPLOYEES'].str.replace(',', ''), errors='coerce').fillna(0)
+        # Clean specific columns
+        if df['REVENUES'].dtype == 'object':
+            df['REVENUES'] = df['REVENUES'].str.replace(',', '').astype(float)
+        else:
+            df['REVENUES'] = df['REVENUES'].astype(float)
+
+        if df['PROFIT'].dtype == 'object':
+            df['PROFIT'] = df['PROFIT'].str.replace(',', '').astype(float)
+        else:
+            df['PROFIT'] = df['PROFIT'].astype(float)
+
+        if df['EMPLOYEES'].dtype == 'object':
+            df['EMPLOYEES'] = df['EMPLOYEES'].str.replace(',', '').astype(int)
+        else:
+            df['EMPLOYEES'] = df['EMPLOYEES'].astype(int)
+
         return df
     except Exception as e:
         st.error(f"Error loading data: {e}")
         return pd.DataFrame()
 
-# Load data
+# Calculate summary metrics
+def calculate_summary(df):
+    if df.empty:
+        return 0, 0  # Handle empty data case
+    total_revenue = df['REVENUES'].sum()
+    total_employees = df['EMPLOYEES'].sum()
+    return total_revenue, total_employees
+
+# Generate heatmaps
+def generate_heatmap(df, column, title):
+    if column not in df.columns:
+        st.error(f"{column} column not found in the data.")
+        return
+    fig = px.choropleth(
+        df,
+        locations="STATE",
+        locationmode="USA-states",
+        color=column,
+        scope="usa",
+        title=title,
+        color_continuous_scale="Viridis"
+    )
+    st.plotly_chart(fig)
+
+# Bar plot for company comparisons
+def plot_company_comparisons(df, company1, company2):
+    data = df[df['NAME'].isin([company1, company2])]
+    if data.empty:
+        st.error("No data available for the selected companies.")
+        return
+
+    for metric in ['REVENUES', 'PROFIT']:
+        fig = px.bar(
+            data,
+            x='NAME',
+            y=metric,
+            text=metric,
+            title=f"{metric} Comparison (In Millions)",
+            labels={metric: f"{metric} (In Millions)"}
+        )
+        st.plotly_chart(fig)
+
+# Load the data
 data_file = 'Fortune 500 Corporate Headquarters.csv'
 df = load_and_clean_data(data_file)
 
-# Ensure data loaded correctly
+# Streamlit app
+st.title("Fortune 500 Data Explorer")
+
 if df.empty:
     st.error("No data available. Please check the CSV file.")
 else:
-    st.title("Fortune 500 Data Explorer")
-
-    # Tabs
     tab1, tab2, tab3, tab4 = st.tabs(["State Comparison", "Company Map", "Company Comparison", "Interactive Insights"])
 
     # Tab 1: State Comparison
     with tab1:
         st.subheader("State Comparison")
-        state_list = ["All States"] + sorted(df['STATE'].unique())
-        selected_state = st.selectbox("Filter by State", state_list)
-
-        if selected_state == "All States":
-            filtered_df = df
-        else:
-            filtered_df = df[df['STATE'] == selected_state]
-
-        total_revenue = filtered_df['REVENUES'].sum()
-        total_employees = filtered_df['EMPLOYEES'].sum()
-
+        total_revenue, total_employees = calculate_summary(df)
         st.write(f"**Total Revenue**: ${total_revenue:,.2f} (In Millions)")
         st.write(f"**Total Employees**: {total_employees:,}")
 
         st.subheader("Heatmaps")
-        st.write("**Profit by State**")
-        profit_fig = px.choropleth(
-            df,
-            locations='STATE',
-            locationmode="USA-states",
-            color='PROFIT',
-            scope="usa",
-            title="Profit by State"
-        )
-        st.plotly_chart(profit_fig, use_container_width=True)
-
-        st.write("**Revenue by State**")
-        revenue_fig = px.choropleth(
-            df,
-            locations='STATE',
-            locationmode="USA-states",
-            color='REVENUES',
-            scope="usa",
-            title="Revenue by State"
-        )
-        st.plotly_chart(revenue_fig, use_container_width=True)
-
-        st.write("**Companies by State**")
-        company_fig = px.choropleth(
-            df.groupby('STATE').size().reset_index(name='COMPANIES'),
-            locations='STATE',
-            locationmode="USA-states",
-            color='COMPANIES',
-            scope="usa",
-            title="Companies by State"
-        )
-        st.plotly_chart(company_fig, use_container_width=True)
+        st.write("Profit by State")
+        generate_heatmap(df, "PROFIT", "Profit by State (In Millions)")
+        st.write("Revenue by State")
+        generate_heatmap(df, "REVENUES", "Revenue by State (In Millions)")
+        st.write("Companies by State")
+        generate_heatmap(df, "STATE", "Companies by State")
 
     # Tab 2: Company Map
     with tab2:
-        st.subheader("Company Map")
+        st.subheader("Company Headquarters Map")
         layer = pdk.Layer(
             "ScatterplotLayer",
             data=df,
             get_position=["LONGITUDE", "LATITUDE"],
-            get_radius=30000,
+            get_radius=10000,  # Static radius size
             get_color=[255, 0, 0],
             pickable=True,
         )
         view_state = pdk.ViewState(latitude=37.7749, longitude=-95.7129, zoom=3)
-        company_map = pdk.Deck(layers=[layer], initial_view_state=view_state)
-        st.pydeck_chart(company_map)
+        map_fig = pdk.Deck(layers=[layer], initial_view_state=view_state, tooltip={"text": "{NAME}"})
+        st.pydeck_chart(map_fig)
 
     # Tab 3: Company Comparison
     with tab3:
         st.subheader("Company Comparison")
-        company_options = df['NAME'].unique()
-        selected_companies = st.multiselect("Select Companies", company_options)
+        companies = st.multiselect("Select Companies", options=df['NAME'].unique(), default=df['NAME'].unique()[:2])
+        if len(companies) == 2:
+            company1, company2 = companies
+            st.write(f"### {company1}")
+            st.write(f"Revenue: ${df[df['NAME'] == company1]['REVENUES'].sum():,.2f} (In Millions)")
+            st.write(f"Profit: ${df[df['NAME'] == company1]['PROFIT'].sum():,.2f} (In Millions)")
+            st.write(f"Website: [Link]({df[df['NAME'] == company1]['WEBSITE'].values[0]})")
 
-        if len(selected_companies) == 2:
-            company_1 = df[df['NAME'] == selected_companies[0]].iloc[0]
-            company_2 = df[df['NAME'] == selected_companies[1]].iloc[0]
+            st.write(f"### {company2}")
+            st.write(f"Revenue: ${df[df['NAME'] == company2]['REVENUES'].sum():,.2f} (In Millions)")
+            st.write(f"Profit: ${df[df['NAME'] == company2]['PROFIT'].sum():,.2f} (In Millions)")
+            st.write(f"Website: [Link]({df[df['NAME'] == company2]['WEBSITE'].values[0]})")
 
-            col1, col2 = st.columns(2)
-            with col1:
-                st.write(f"### {company_1['NAME']}")
-                st.write(f"Revenue: ${company_1['REVENUES']:,.2f} (In Millions)")
-                st.write(f"Profit: ${company_1['PROFIT']:,.2f} (In Millions)")
-                st.write(f"Website: [Link]({company_1['WEBSITE']})")
-
-            with col2:
-                st.write(f"### {company_2['NAME']}")
-                st.write(f"Revenue: ${company_2['REVENUES']:,.2f} (In Millions)")
-                st.write(f"Profit: ${company_2['PROFIT']:,.2f} (In Millions)")
-                st.write(f"Website: [Link]({company_2['WEBSITE']})")
+            plot_company_comparisons(df, company1, company2)
         else:
-            st.info("Please select exactly two companies for comparison.")
+            st.info("Please select exactly two companies to compare.")
 
     # Tab 4: Interactive Insights
     with tab4:
         st.subheader("Interactive Insights")
-        metric = st.selectbox("Choose Metric", ["Revenue", "Profit", "Employees"])
-        threshold = st.slider(f"Minimum {metric}", 0, int(df[metric.upper()].max()), step=1000)
+        metric = st.selectbox("Choose Metric", ["REVENUES", "PROFIT"])
+        threshold = st.slider(f"Minimum {metric} (In Millions)", min_value=0, max_value=int(df[metric].max()), step=1000)
+        filtered_df = df[df[metric] >= threshold]
+        st.write(f"Filtered Companies with {metric} greater than {threshold} (In Millions):")
+        st.dataframe(filtered_df)
 
-        filtered_insights = df[df[metric.upper()] >= threshold]
-        st.write(f"Companies with {metric} >= {threshold}")
-        st.dataframe(filtered_insights)
-
-        fig6 = px.bar(filtered_insights, x="NAME", y=metric.upper(), title=f"{metric} of Filtered Companies")
-        st.plotly_chart(fig6, use_container_width=True)
+        if not filtered_df.empty:
+            fig = px.bar(
+                filtered_df,
+                x="NAME",
+                y=metric,
+                text=metric,
+                title=f"{metric} of Filtered Companies (In Millions)",
+                labels={metric: f"{metric} (In Millions)"}
+            )
+            st.plotly_chart(fig)
