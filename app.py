@@ -3,6 +3,7 @@ Name:       Harry Chow
 CS230:      Section 2
 Data:       https://www.kaggle.com/datasets/mannmann2/fortune-500-corporate-headquarters
 URL:        https://fortune500analysis.streamlit.app/
+Github URL: https://github.com/harrychow04/Fortune500Analysis
 
 Description:
 This app allows users to explore data on Fortune 500 companies through state comparisons and detailed company comparisons. Gain insights into revenue, profits, and employee distribution.
