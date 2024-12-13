@@ -42,14 +42,6 @@ df = load_data(file_path)
 # Add the Logo
 st.image("logo.png", width=200)
 
-# [DA2] Calculate Summary Metrics
-def calculate_summary(df):
-    if df.empty:
-        return 0, 0
-    total_revenue = df['REVENUES'].sum()
-    total_employees = df['EMPLOYEES'].sum()
-    return total_revenue, total_employees
-
 # [DA3] Tabs for Navigation
 st.title("Fortune 500 Data Explorer")
 tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
@@ -81,51 +73,45 @@ with tab1:
 with tab2:
     st.subheader("State Comparison")
 
-    # Aggregated Data for Heatmaps
-    state_aggregates = df.groupby('STATE')[['REVENUES', 'PROFIT', 'EMPLOYEES']].sum().reset_index()
-
-    # Revenue Heatmap
-    st.write("### Revenue by State (In Millions)")
+    # Heatmap: Revenue by State
+    st.write("Revenue by State (In Millions) shows the distribution of revenues across U.S. states.")
     revenue_map = px.choropleth(
-        state_aggregates, 
+        df, 
         locations="STATE", 
         locationmode="USA-states", 
         color="REVENUES", 
-        scope="usa", 
         color_continuous_scale="Viridis",
-        title="Revenue by State (In Millions)",
+        scope="usa", 
         labels={"REVENUES": "Revenue (In Millions)"},
-        range_color=(0, state_aggregates["REVENUES"].max())
+        title="Revenue by State (In Millions)"
     )
     st.plotly_chart(revenue_map, use_container_width=True)
 
-    # Employees Heatmap
-    st.write("### Employees by State")
-    employee_map = px.choropleth(
-        state_aggregates, 
+    # Heatmap: Employees by State
+    st.write("Employees by State shows the number of employees across U.S. states.")
+    employees_map = px.choropleth(
+        df, 
         locations="STATE", 
         locationmode="USA-states", 
         color="EMPLOYEES", 
+        color_continuous_scale="Viridis",
         scope="usa", 
-        color_continuous_scale="Plasma",
-        title="Employees by State",
         labels={"EMPLOYEES": "Employees"},
-        range_color=(0, state_aggregates["EMPLOYEES"].max())
+        title="Employees by State"
     )
-    st.plotly_chart(employee_map, use_container_width=True)
+    st.plotly_chart(employees_map, use_container_width=True)
 
-    # Profit Heatmap
-    st.write("### Profit by State (In Millions)")
+    # Heatmap: Profit by State
+    st.write("Profit by State (In Millions) shows the distribution of profits across U.S. states.")
     profit_map = px.choropleth(
-        state_aggregates, 
+        df, 
         locations="STATE", 
         locationmode="USA-states", 
         color="PROFIT", 
+        color_continuous_scale="Viridis",
         scope="usa", 
-        color_continuous_scale="Cividis",
-        title="Profit by State (In Millions)",
         labels={"PROFIT": "Profit (In Millions)"},
-        range_color=(0, state_aggregates["PROFIT"].max())
+        title="Profit by State (In Millions)"
     )
     st.plotly_chart(profit_map, use_container_width=True)
 
@@ -133,10 +119,11 @@ with tab2:
 with tab3:
     st.subheader("Company Headquarters Map")
 
-    # Display Map with Hover Tooltips
+    # State Filter
     state_filter = st.selectbox("Filter by State", options=["All States"] + sorted(df['STATE'].unique()))
     filtered_df = df if state_filter == "All States" else df[df['STATE'] == state_filter]
 
+    # Display Map
     try:
         layer = pdk.Layer(
             "ScatterplotLayer",
@@ -145,10 +132,11 @@ with tab3:
             get_radius=st.slider("Dot Size", min_value=1000, max_value=50000, value=30000),
             get_color=[255, 0, 0],
             pickable=True,
-            get_tooltip="NAME"
+            auto_highlight=True,
+            tooltip={"text": "{NAME}"}
         )
         view_state = pdk.ViewState(latitude=37.7749, longitude=-95.7129, zoom=3)
-        map_fig = pdk.Deck(layers=[layer], initial_view_state=view_state)
+        map_fig = pdk.Deck(layers=[layer], initial_view_state=view_state, tooltip={"text": "{NAME}"})
         st.pydeck_chart(map_fig)
     except Exception as e:
         st.error(f"An error occurred: {e}")
@@ -158,27 +146,47 @@ with tab4:
     st.subheader("Company Comparison")
     selected_companies = st.multiselect("Select Companies", options=df['NAME'].unique())
     comparison_df = df[df['NAME'].isin(selected_companies)]
+
     for _, row in comparison_df.iterrows():
         st.write(f"### {row['NAME']}")
         st.write(f"Revenue: ${row['REVENUES']:,} (In Millions)")
         st.write(f"Profit: ${row['PROFIT']:,} (In Millions)")
+        st.write(f"Headquarters: {row['CITY']}, {row['STATE']}")
         st.write(f"[Website]({row['WEBSITE']})")
         st.write("---")
+
+        # Additional State Insights
+        state_data = df[df['STATE'] == row['STATE']]
+        if not state_data.empty:
+            st.write(f"#### Insights for {row['STATE']}:")
+            total_state_revenue = state_data['REVENUES'].sum()
+            total_state_profit = state_data['PROFIT'].sum()
+            total_state_employees = state_data['EMPLOYEES'].sum()
+            st.write(f"- Total Revenue: ${total_state_revenue:,.2f} (In Millions)")
+            st.write(f"- Total Profit: ${total_state_profit:,.2f} (In Millions)")
+            st.write(f"- Total Employees: {total_state_employees:,}")
+            st.write("---")
 
 # [DA8] Interactive Insights Tab
 with tab5:
     st.subheader("Interactive Insights")
     metric = st.selectbox("Choose Metric", options=["REVENUES", "PROFIT", "EMPLOYEES"])
-    threshold = st.slider(f"Minimum {metric}", min_value=0, max_value=int(df[metric].max()), step=1000)
+    threshold = st.slider(f"Minimum {metric} (In Millions)", min_value=0, max_value=int(df[metric].max()), step=1000)
     filtered_insights = df[df[metric] >= threshold].sort_values(by=metric, ascending=False)
     fig = px.bar(
         filtered_insights, 
         x="NAME", 
         y=metric, 
         title=f"{metric.capitalize()} of Filtered Companies (In Millions)",
-        labels={metric: f"{metric.capitalize()} (In Millions)" if metric != "EMPLOYEES" else metric.capitalize()}
+        labels={metric: f"{metric.capitalize()} (In Millions)"}
     )
     st.plotly_chart(fig, use_container_width=True)
+
+    # Display Top 5 Companies
+    st.write("### Top 5 Companies")
+    top_5 = filtered_insights.head(5)
+    for i, row in top_5.iterrows():
+        st.write(f"{i+1}. {row['NAME']} - {row[metric]:,.2f} (In Millions)")
 
 # [DA9] Export Data Tab
 with tab6:
