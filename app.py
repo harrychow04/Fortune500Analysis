@@ -35,7 +35,7 @@ def load_and_clean_data(filepath):
         return pd.DataFrame()
 
 # Load data
-data_file = 'Fortune_500_Corporate_Headquarters.csv'
+data_file = 'Fortune 500 Corporate Headquarters.csv'
 df = load_and_clean_data(data_file)
 
 # [PY2] Function to calculate summaries
