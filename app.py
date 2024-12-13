@@ -25,8 +25,6 @@ def load_data(file_path):
         df.columns = df.columns.str.strip()  # Clean column names
 
         # Ensure financial and numeric columns are cleaned
-        if 'NAME' in df.columns and df['NAME'].dtype != 'object':
-            df['NAME'] = df['NAME'].astype(str)
         if 'REVENUES' in df.columns and df['REVENUES'].dtype == 'object':
             df['REVENUES'] = pd.to_numeric(df['REVENUES'].str.replace(',', ''), errors='coerce').fillna(0)
         if 'PROFIT' in df.columns and df['PROFIT'].dtype == 'object':
@@ -43,11 +41,8 @@ def load_data(file_path):
 file_path = 'Fortune 500 Corporate Headquarters.csv'
 df = load_data(file_path)
 
-# Verify Column Names
-st.write("Columns in dataset:", df.columns)
-
 # [DA3] Add Logo
-st.image("logo.png", width=150)
+st.image("logo.png", width=250)
 
 # [DA4] Dashboard Overview
 st.title("Fortune 500 Data Explorer")
@@ -65,38 +60,45 @@ with tab1:
     st.metric(label="Total Revenue (In Millions)", value=f"${df['REVENUES'].sum():,.2f}")
     st.metric(label="Total Employees", value=f"{df['EMPLOYEES'].sum():,}")
 
-    # AI-Generated Insights
-    st.write("### AI-Generated Insights")
-    try:
-        top_state = df.groupby('STATE')['REVENUES'].sum().idxmax()
-        top_company = df.loc[df['REVENUES'].idxmax()]
-        st.write(f"📊 The state with the highest total revenue is **{top_state}**.")
-        st.write(f"🏢 The company with the highest revenue is **{top_company['NAME']}**, "
-                 f"generating ${top_company['REVENUES']:,.2f} in revenue.")
-    except Exception as e:
-        st.error("Unable to generate insights.")
-
 # [DA6] State Comparison Tab
 with tab2:
     st.subheader("State Comparison")
 
-    # Heatmap Filters
-    min_profit = st.slider("Minimum Profit for Heatmap (In Millions)", min_value=0, max_value=int(df['PROFIT'].max()), step=100)
-    filtered_df = df[df['PROFIT'] >= min_profit]
-
-    # Heatmap: Profit by State
+    # Heatmap: Revenue by State
     try:
-        profit_map = px.choropleth(
-            filtered_df, 
+        revenue_map = px.choropleth(
+            df, 
             locations="STATE", 
             locationmode="USA-states", 
-            color="PROFIT", 
+            color="REVENUES", 
             scope="usa", 
-            title=f"Profit by State (Min: {min_profit})"
+            title="Revenue by State (In Millions)",
+            labels={"REVENUES": "Revenue (In Millions)"}
         )
-        st.plotly_chart(profit_map, use_container_width=True)
+        st.plotly_chart(revenue_map, use_container_width=True)
     except Exception as e:
-        st.error(f"An error occurred: {e}")
+        st.error(f"Error generating Revenue by State heatmap: {e}")
+
+    # Heatmap: Employees by State
+    try:
+        employees_map = px.choropleth(
+            df, 
+            locations="STATE", 
+            locationmode="USA-states", 
+            color="EMPLOYEES", 
+            scope="usa", 
+            title="Employees by State",
+            labels={"EMPLOYEES": "Employees"}
+        )
+        st.plotly_chart(employees_map, use_container_width=True)
+    except Exception as e:
+        st.error(f"Error generating Employees by State heatmap: {e}")
+
+    # Summary: Top 5 States by Revenue
+    st.write("### Top 5 States by Revenue")
+    top_states = df.groupby('STATE')['REVENUES'].sum().sort_values(ascending=False).head(5)
+    for state, revenue in top_states.items():
+        st.write(f"• {state}: ${revenue:,.2f} (In Millions)")
 
 # [DA7] Company Map Tab
 with tab3:
