@@ -57,7 +57,7 @@ with tab2:
         df, locations='STATE', locationmode="USA-states", color='REVENUES',
         scope="usa", color_continuous_scale="Viridis",
         title="Revenue Distribution by State",
-        range_color=(0, max_revenue)
+        range_color=(0, 100000),  # Adjusted range for better contrast
     )
     st.plotly_chart(revenue_map, use_container_width=True)
 
@@ -68,7 +68,7 @@ with tab2:
         df, locations='STATE', locationmode="USA-states", color='EMPLOYEES',
         scope="usa", color_continuous_scale="Plasma",
         title="Employees Distribution by State",
-        range_color=(0, max_employees)
+        range_color=(0, 100000),  # Adjusted range for better contrast
     )
     st.plotly_chart(employees_map, use_container_width=True)
 
@@ -79,7 +79,7 @@ with tab2:
         df, locations='STATE', locationmode="USA-states", color='PROFIT',
         scope="usa", color_continuous_scale="Cividis",
         title="Profit Distribution by State",
-        range_color=(0, max_profit)
+        range_color=(0, 100000),  # Adjusted range for better contrast
     )
     st.plotly_chart(profit_map, use_container_width=True)
 
