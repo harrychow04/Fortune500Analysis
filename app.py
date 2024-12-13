@@ -175,48 +175,59 @@ with tab4:
 with tab5:
     st.subheader("Investment Insights")
 
-    # Select metric and filter data
-    metric = st.selectbox("Choose Metric", options=["REVENUES", "PROFIT", "EMPLOYEES"], label_visibility="visible")
-    threshold = st.slider(f"Minimum {metric.capitalize()}", min_value=0, max_value=int(df[metric].max()), step=1000)
+    # Select Metric and Set Threshold
+    metric = st.selectbox("Choose a Metric to Analyze", options=["REVENUES", "PROFIT", "EMPLOYEES"])
+    threshold = st.slider(
+        f"Filter Companies by Minimum {metric.capitalize()}",
+        min_value=0, max_value=int(df[metric].max()), step=1000,
+        value=int(df[metric].mean())  # Default to the average
+    )
+
+    # Filter Companies Based on Metric and Threshold
     filtered_insights = df[df[metric] >= threshold].sort_values(by=metric, ascending=False)
 
     if not filtered_insights.empty:
-        # Key Metrics
+        # Key Metrics Section
+        st.write(f"### Key Insights for {metric.capitalize()}")
         top_company = filtered_insights.iloc[0]
         average_metric = filtered_insights[metric].mean()
-        st.write(f"### Top {metric.capitalize()} Insights")
-        st.write(f"- 🏆 **Top Company**: {top_company['NAME']} with a {metric.capitalize()} of **${top_company[metric]:,.2f}**.")
-        st.write(f"- 📊 Average {metric.capitalize()}: **${average_metric:,.2f}**")
 
-        # Benchmarking
-        state_averages = df.groupby('STATE')[metric].mean()
-        selected_state = st.selectbox("Select State for Benchmarking", options=state_averages.index)
-        state_average = state_averages[selected_state]
-        st.write(f"📍 Average {metric.capitalize()} in {selected_state}: ${state_average:,.2f}")
+        # Format values based on metric type
+        metric_unit = "Employees" if metric == "EMPLOYEES" else "USD"
+        metric_format = "{:,}" if metric == "EMPLOYEES" else "${:,.2f}"
 
-        # Display Companies Above Threshold
-        st.write(f"### Companies with {metric.capitalize()} Above {threshold:,}")
-        for company, value in zip(filtered_insights['NAME'], filtered_insights[metric]):
-            st.write(f"- **{company}**: {metric.capitalize()} = ${value:,.2f}")
+        st.write(f"- 🏆 **Top Company**: {top_company['NAME']} with {metric.capitalize()} = {metric_format.format(top_company[metric])}.")
+        st.write(f"- 📊 **Average {metric.capitalize()}** across selected companies: {metric_format.format(average_metric)}.")
+        st.write(f"- 🔢 **Total Companies Above Threshold**: {len(filtered_insights)}.")
 
-        # Scatterplot
+        # Display Top Companies
+        top_n = st.slider("Show Top N Companies", min_value=5, max_value=20, step=1, value=10)
+        st.write(f"### Top {top_n} Companies by {metric.capitalize()}")
+        st.table(filtered_insights.head(top_n)[['NAME', metric, 'EMPLOYEES']])
+
+        # Scatterplot Visualization
         comparison_metric = st.selectbox(
             "Compare Against Another Metric", options=["REVENUES", "PROFIT", "EMPLOYEES"]
         )
+        st.write(f"### {metric.capitalize()} vs. {comparison_metric.capitalize()} (Scatterplot)")
         fig_scatter = px.scatter(
             filtered_insights, 
             x=metric, 
             y=comparison_metric, 
             hover_name="NAME",
             title=f"{metric.capitalize()} vs {comparison_metric.capitalize()}",
-            labels={metric: metric.capitalize(), comparison_metric: comparison_metric.capitalize()}
+            labels={
+                metric: metric.capitalize(),
+                comparison_metric: comparison_metric.capitalize(),
+            }
         )
         st.plotly_chart(fig_scatter, use_container_width=True)
 
         # Revenue Per Employee Analysis
-        st.write("### Companies with the Highest Revenue per Employee")
-        top_rpe = df.nlargest(10, 'REVENUE_PER_EMPLOYEE')[['NAME', 'REVENUE_PER_EMPLOYEE']]
-        st.table(top_rpe)
+        if metric == "REVENUES":
+            st.write("### Companies with the Highest Revenue per Employee")
+            top_rpe = filtered_insights.nlargest(10, 'REVENUE_PER_EMPLOYEE')[['NAME', 'REVENUE_PER_EMPLOYEE']]
+            st.table(top_rpe)
 
         # Financial News Links
         st.write("### Explore More Financial Insights")
@@ -226,11 +237,13 @@ with tab5:
         - [Google Finance](https://www.google.com/finance)
         """)
 
-        # Recommendations
+        # Recommendations Section
         st.write("### Recommendations")
-        st.write(f"- Focus on companies with {metric.capitalize()} above ${threshold:,}.")
-        st.write("- Prioritize companies with high revenue per employee.")
+        st.write(f"- Focus on companies with {metric.capitalize()} above {metric_format.format(threshold)}.")
+        if metric == "REVENUES" and 'REVENUE_PER_EMPLOYEE' in df.columns:
+            st.write("- Prioritize companies with high revenue per employee for better operational efficiency.")
     else:
+        st.write(f"No companies match the criteria of {metric.capitalize()} above {threshold:,}.")
         st.write(f"No companies match the selected criteria of {metric.capitalize()} above {threshold:,}.")
 
 #[DA9] Export Data Tab
