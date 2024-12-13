@@ -169,52 +169,54 @@ with tab4:
         st.write(f"[Website]({row['WEBSITE']})")
         st.write("---")
 
-# [DA8] Interactive Insights Tab
+# [DA8] Interactive Insights Tab (Financial Investment Advice)
 with tab5:
-    st.subheader("Interactive Insights")
+    st.subheader("Investment Insights")
 
     # Select metric and filter data
     metric = st.selectbox("Choose Metric", options=["REVENUES", "PROFIT", "EMPLOYEES"], label_visibility="visible")
     threshold = st.slider(f"Minimum {metric.capitalize()} (In Millions)", min_value=0, max_value=int(df[metric].max()), step=1000)
     filtered_insights = df[df[metric] >= threshold].sort_values(by=metric, ascending=False)
 
-    # Display Bar Chart of Filtered Companies
-    st.write(f"### {metric.capitalize()} Analysis for Filtered Companies")
-    fig = px.bar(
-        filtered_insights, 
-        x="NAME", 
-        y=metric, 
-        title=f"{metric.capitalize()} of Filtered Companies (In Millions)",
-        labels={metric: f"{metric.capitalize()} (In Millions)"},
-        text_auto=True
-    )
-    st.plotly_chart(fig, use_container_width=True)
-
-    # Generate and Display Key Insights
     if not filtered_insights.empty:
         top_company = filtered_insights.iloc[0]
         average_metric = filtered_insights[metric].mean()
         percentile = st.slider("Choose Percentile for Threshold Suggestion", min_value=0, max_value=100, step=5, value=75)
         suggested_threshold = filtered_insights[metric].quantile(percentile / 100)
 
-        st.write("### Key Insights")
+        # Key Metrics for Investors
+        st.write("### Key Metrics for Investors")
         st.write(f"- 🏆 **Top Company**: {top_company['NAME']} with a {metric.capitalize()} of **${top_company[metric]:,.2f} (In Millions)**.")
         st.write(f"- 📊 The **average {metric.capitalize()}** across filtered companies is **${average_metric:,.2f} (In Millions)**.")
         st.write(f"- 🎯 Suggested Threshold for Top Performers: **${suggested_threshold:,.2f} (In Millions)** (Top {100 - percentile}% percentile).")
 
-        # Add Benchmarking Section
-        st.write("### Benchmark")
-        above_average = len(filtered_insights[filtered_insights[metric] > average_metric])
-        below_average = len(filtered_insights) - above_average
-        st.write(f"- **{above_average} companies** are above the average {metric.capitalize()}.")
-        st.write(f"- **{below_average} companies** are below the average.")
+        # Investment Opportunities
+        st.write("### Investment Opportunities")
+        top_regions = filtered_insights.groupby('STATE')[metric].sum().sort_values(ascending=False).head(3)
+        top_industries = filtered_insights.groupby('INDUSTRY')[metric].sum().sort_values(ascending=False).head(3)
 
-        # Recommendations
-        st.write("### Recommendations")
-        st.write(f"- Prioritize companies with {metric.capitalize()} above **${suggested_threshold:,.2f} (In Millions)**.")
-        st.write("- Focus on industries or states where top performers are concentrated.")
+        st.write(f"📍 **Top Regions for Investment**:")
+        for state, value in top_regions.items():
+            st.write(f"- **{state}**: ${value:,.2f} (In Millions)")
 
-        # Add Comparison Chart
+        st.write(f"🏭 **Top Industries for Investment**:")
+        for industry, value in top_industries.items():
+            st.write(f"- **{industry}**: ${value:,.2f} (In Millions)")
+
+        # Risk Assessment
+        st.write("### Risk Assessment")
+        low_performers = df[df[metric] < average_metric].groupby('STATE').size().sort_values(ascending=False).head(3)
+        st.write(f"⚠️ **Underperforming Regions** (Below Average {metric.capitalize()}):")
+        for state, count in low_performers.items():
+            st.write(f"- **{state}**: {count} companies")
+
+        # Portfolio Insights
+        st.write("### Portfolio Insights")
+        st.write("- Diversify your investments across **regions and industries** to reduce risk.")
+        st.write(f"- Focus on companies above **${suggested_threshold:,.2f}**, as they represent top performers.")
+        st.write("- Avoid over-concentration in regions with consistent underperformance.")
+
+        # Dynamic Comparison Chart
         comparison_metric = st.selectbox("Choose a Metric for Comparison", options=["PROFIT", "EMPLOYEES", "REVENUES"])
         comparison_fig = px.scatter(
             filtered_insights, 
@@ -231,6 +233,8 @@ with tab5:
             y=suggested_threshold, line_dash="dot", line_color="blue", annotation_text=f"Top {100 - percentile}% Threshold"
         )
         st.plotly_chart(comparison_fig, use_container_width=True)
+    else:
+        st.write("No companies match the selected criteria. Try adjusting the threshold or metric.")
 
 # [DA9] Export Data Tab
 with tab6:
