@@ -195,8 +195,8 @@ with tab5:
             st.write(f"- 📊 The **average {metric.capitalize()}** across filtered companies is **${average_metric:,.2f} (In Millions)**.")
             st.write(f"- 🎯 Suggested Threshold for Top Performers: **${suggested_threshold:,.2f} (In Millions)** (Top {100 - percentile}% percentile).")
 
-        # Additional Visualizations
-        st.write("### Additional Visualizations")
+        # Data Visualizations
+        st.write("### Data Visualizations")
 
         # State-Level Employee Distribution (Bar Chart)
         if metric == "EMPLOYEES":
