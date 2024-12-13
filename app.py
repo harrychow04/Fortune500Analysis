@@ -113,36 +113,6 @@ with tab2:
     )
     st.plotly_chart(revenue_map, use_container_width=True)
 
-    # Employees Heatmap
-    st.write("### Employees by State")
-    employee_map = px.choropleth(
-        state_aggregates, 
-        locations="STATE", 
-        locationmode="USA-states", 
-        color="EMPLOYEES", 
-        scope="usa", 
-        color_continuous_scale="Plasma",
-        title="Employees by State",
-        labels={"EMPLOYEES": "Employees"},
-        range_color=(0, state_aggregates["EMPLOYEES"].max())
-    )
-    st.plotly_chart(employee_map, use_container_width=True)
-
-    # Profit Heatmap
-    st.write("### Profit by State (In Millions)")
-    profit_map = px.choropleth(
-        state_aggregates, 
-        locations="STATE", 
-        locationmode="USA-states", 
-        color="PROFIT", 
-        scope="usa", 
-        color_continuous_scale="Cividis",
-        title="Profit by State (In Millions)",
-        labels={"PROFIT": "Profit (In Millions)"},
-        range_color=(0, state_aggregates["PROFIT"].max())
-    )
-    st.plotly_chart(profit_map, use_container_width=True)
-
 # [DA6] Company Map Tab
 with tab3:
     st.subheader("Company Headquarters Map")
@@ -201,10 +171,6 @@ with tab5:
         st.write(f"- 📊 The **average {metric.capitalize()}** across filtered companies is **${average_metric:,.2f}**.")
         st.write(f"- 🎯 Suggested Threshold for Top Performers: **${suggested_threshold:,.2f}** (Top {100 - percentile}% percentile).")
 
-        # List Comprehension [PY4]
-        company_names = [name for name in filtered_insights['NAME'] if "Inc" in name]
-        st.write(f"List of Companies Containing 'Inc': {company_names}")
-
         # Data Visualizations
         st.write("### Data Visualizations")
 
@@ -220,6 +186,20 @@ with tab5:
             text=metric
         )
         st.plotly_chart(fig_hbar, use_container_width=True)
+
+        # Links to Financial News Resources
+        st.write("### Explore More Financial Insights")
+        st.markdown("""
+        - [Yahoo Finance](https://finance.yahoo.com)
+        - [Bloomberg](https://www.bloomberg.com)
+        - [Google Finance](https://www.google.com/finance)
+        """)
+
+        # Filter: Companies Containing "Inc"
+        inc_filter = st.checkbox("Show Only Companies Containing 'Inc'")
+        if inc_filter:
+            filtered_insights = filtered_insights[filtered_insights['NAME'].str.contains("Inc", na=False)]
+            st.write(filtered_insights[['NAME', 'REVENUES', 'PROFIT', 'EMPLOYEES']])
 
     else:
         st.write("No companies match the selected criteria. Try adjusting the threshold or metric.")
