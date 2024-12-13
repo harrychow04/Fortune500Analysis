@@ -134,26 +134,47 @@ with tab2:
     )
     st.plotly_chart(profit_map, use_container_width=True)
 
-#[DA6] Company Map Tab
+# [DA6] Company Map Tab
 with tab3:
     st.subheader("Company Headquarters Map")
 
-    #State Filter
+    # State Filter
     state_filter = st.selectbox("Filter by State", options=["All States"] + sorted(df['STATE'].unique()))
     filtered_df = df if state_filter == "All States" else df[df['STATE'] == state_filter]
 
-    #Display Map
+    # Display Map
     try:
+        # Create a tooltip to display company name and address
+        tooltip = {
+            "html": "<b>Company:</b> {NAME}<br><b>Address:</b> {CITY}, {STATE}",
+            "style": {
+                "backgroundColor": "steelblue",
+                "color": "white",
+                "fontSize": "12px",
+                "borderRadius": "5px",
+                "padding": "5px",
+            }
+        }
+
+        # Scatterplot Layer for the map
         layer = pdk.Layer(
             "ScatterplotLayer",
             data=filtered_df,
             get_position=["LONGITUDE", "LATITUDE"],
             get_radius=st.slider("Dot Size", min_value=1000, max_value=50000, value=30000),
-            get_color=[255, 0, 0],
+            get_fill_color=[255, 0, 0],
             pickable=True
         )
+
+        # Configure the map's view state
         view_state = pdk.ViewState(latitude=37.7749, longitude=-95.7129, zoom=3)
-        map_fig = pdk.Deck(layers=[layer], initial_view_state=view_state)
+
+        # Render the map with tooltips
+        map_fig = pdk.Deck(
+            layers=[layer],
+            initial_view_state=view_state,
+            tooltip=tooltip
+        )
         st.pydeck_chart(map_fig)
     except Exception as e:
         st.error(f"An error occurred: {e}")
