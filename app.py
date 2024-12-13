@@ -193,7 +193,7 @@ with tab5:
         # Financial Resource Links
         st.write("### Explore More Financial Insights")
         st.markdown(f"""
-        - [Yahoo Finance - {top_company['NAME']}]({top_company['WEBSITE']})
+        - [Yahoo Finance] (https://finance.yahoo.com)
         - [Google Finance](https://www.google.com/finance)
         - [Bloomberg](https://www.bloomberg.com)
         """)
