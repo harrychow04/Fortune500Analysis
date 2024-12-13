@@ -144,9 +144,12 @@ with tab3:
 
     # Display Map
     try:
-        # Create a tooltip to display company name and address
+        # Create a tooltip to display company name and full address (Street, City, State)
         tooltip = {
-            "html": "<b>Company:</b> {NAME}<br><b>Address:</b> {CITY}, {STATE}",
+            "html": """
+                <b>Company:</b> {NAME}<br>
+                <b>Address:</b> {ADDRESS}, {CITY}, {STATE}
+            """,
             "style": {
                 "backgroundColor": "steelblue",
                 "color": "white",
