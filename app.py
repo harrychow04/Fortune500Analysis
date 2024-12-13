@@ -2,7 +2,7 @@
 Name:       Harry Chow
 CS230:      Section 2
 Data:       https://www.kaggle.com/datasets/mannmann2/fortune-500-corporate-headquarters
-URL:        Link to your web application on Streamlit Cloud (if posted)
+URL:        https://fortune500analysis.streamlit.app/
 
 Description:
 This app allows users to explore data on Fortune 500 companies through state comparisons and detailed company comparisons. Gain insights into revenue, profits, and employee distribution.
@@ -193,8 +193,12 @@ with tab5:
         average_metric = filtered_insights[metric].mean()
 
         # Format values based on metric type
-        metric_unit = "Employees" if metric == "EMPLOYEES" else "USD"
-        metric_format = "{:,}" if metric == "EMPLOYEES" else "${:,.2f}"
+        if metric == "EMPLOYEES":
+            metric_format = "{:,}"  # Comma-separated integers for employees
+            metric_unit = "Employees"
+        else:
+            metric_format = "${:,.2f}"  # Monetary values for revenues and profit
+            metric_unit = "USD"
 
         st.write(f"- 🏆 **Top Company**: {top_company['NAME']} with {metric.capitalize()} = {metric_format.format(top_company[metric])}.")
         st.write(f"- 📊 **Average {metric.capitalize()}** across selected companies: {metric_format.format(average_metric)}.")
@@ -203,13 +207,15 @@ with tab5:
         # Display Top Companies
         top_n = st.slider("Show Top N Companies", min_value=5, max_value=20, step=1, value=10)
         st.write(f"### Top {top_n} Companies by {metric.capitalize()}")
-        st.table(filtered_insights.head(top_n)[['NAME', metric, 'EMPLOYEES']])
+        st.table(filtered_insights.head(top_n)[['NAME', metric]])
 
         # Scatterplot Visualization
         comparison_metric = st.selectbox(
             "Compare Against Another Metric", options=["REVENUES", "PROFIT", "EMPLOYEES"]
         )
         st.write(f"### {metric.capitalize()} vs. {comparison_metric.capitalize()} (Scatterplot)")
+
+        # Ensure proper formatting for scatterplot based on numeric values
         fig_scatter = px.scatter(
             filtered_insights, 
             x=metric, 
@@ -223,7 +229,7 @@ with tab5:
         )
         st.plotly_chart(fig_scatter, use_container_width=True)
 
-        # Revenue Per Employee Analysis
+        # Revenue Per Employee Analysis (only for REVENUES)
         if metric == "REVENUES":
             st.write("### Companies with the Highest Revenue per Employee")
             top_rpe = filtered_insights.nlargest(10, 'REVENUE_PER_EMPLOYEE')[['NAME', 'REVENUE_PER_EMPLOYEE']]
