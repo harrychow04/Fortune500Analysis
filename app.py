@@ -5,7 +5,7 @@ Data:       https://www.kaggle.com/datasets/mannmann2/fortune-500-corporate-head
 URL:        Link to your web application on Streamlit Cloud (if posted) 
 
 Description:    
-This app allows users to explore data on Fortune 500 companies through state comparisons and detailed company comparisons. Gain insights into revenue, profits, and employee distribution.
+This app allows users to explore data on Fortune 500 companies through state comparisons, detailed company comparisons, and heatmaps. Gain insights into revenue, profits, employee distribution, and more.
 """
 
 import streamlit as st
@@ -26,12 +26,9 @@ def load_data(file_path):
         df.columns = df.columns.str.strip()
 
         # Ensure financial and numeric columns are cleaned
-        if 'REVENUES' in df and df['REVENUES'].dtype == 'object':
-            df['REVENUES'] = pd.to_numeric(df['REVENUES'].str.replace(',', ''), errors='coerce').fillna(0)
-        if 'PROFIT' in df and df['PROFIT'].dtype == 'object':
-            df['PROFIT'] = pd.to_numeric(df['PROFIT'].str.replace(',', ''), errors='coerce').fillna(0)
-        if 'EMPLOYEES' in df and df['EMPLOYEES'].dtype == 'object':
-            df['EMPLOYEES'] = pd.to_numeric(df['EMPLOYEES'].str.replace(',', ''), errors='coerce').fillna(0)
+        df['REVENUES'] = pd.to_numeric(df['REVENUES'].str.replace(',', ''), errors='coerce').fillna(0)
+        df['PROFIT'] = pd.to_numeric(df['PROFIT'].str.replace(',', ''), errors='coerce').fillna(0)
+        df['EMPLOYEES'] = pd.to_numeric(df['EMPLOYEES'].str.replace(',', ''), errors='coerce').fillna(0)
 
         return df
     except Exception as e:
@@ -53,15 +50,15 @@ def calculate_summary(df):
 # Add the Logo
 st.image("logo.png", width=150)
 
-# [DA3] Tabs for Navigation
-st.title("Fortune 500 Data Explorer")
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
-    "Dashboard Overview", "State Comparison", "Company Map", 
-    "Company Comparison", "Interactive Insights", "Export Data"
-])
+# [DA3] Side Navigation Menu
+menu = st.sidebar.radio(
+    "Explore the Data",
+    ["Dashboard Overview", "State Comparison", "Company Map", 
+     "Company Comparison", "Interactive Insights", "Export Data"]
+)
 
 # [DA4] Dashboard Overview
-with tab1:
+if menu == "Dashboard Overview":
     st.subheader("Dashboard Overview")
 
     # Summary Cards
@@ -81,29 +78,54 @@ with tab1:
         st.error("Unable to generate insights.")
 
 # [DA5] State Comparison Tab
-with tab2:
+if menu == "State Comparison":
     st.subheader("State Comparison")
 
     # Heatmap Filters
     min_profit = st.slider("Minimum Profit for Heatmap (In Millions)", min_value=0, max_value=int(df['PROFIT'].max()), step=100)
     filtered_df = df[df['PROFIT'] >= min_profit]
 
-    # Heatmap: Profit by State
+    # Heatmaps
+    st.write("### Heatmaps")
     try:
+        # Heatmap: Profit by State
         profit_map = px.choropleth(
             filtered_df, 
             locations="STATE", 
             locationmode="USA-states", 
             color="PROFIT", 
             scope="usa", 
-            title=f"Profit by State (Min: {min_profit})"
+            title="Profit by State (In Millions)"
         )
         st.plotly_chart(profit_map, use_container_width=True)
+
+        # Heatmap: Revenue by State
+        revenue_map = px.choropleth(
+            df, 
+            locations="STATE", 
+            locationmode="USA-states", 
+            color="REVENUES", 
+            scope="usa", 
+            title="Revenue by State (In Millions)"
+        )
+        st.plotly_chart(revenue_map, use_container_width=True)
+
+        # Heatmap: Companies by State
+        company_count = df.groupby('STATE').size().reset_index(name='COMPANY_COUNT')
+        companies_map = px.choropleth(
+            company_count, 
+            locations="STATE", 
+            locationmode="USA-states", 
+            color="COMPANY_COUNT", 
+            scope="usa", 
+            title="Companies by State"
+        )
+        st.plotly_chart(companies_map, use_container_width=True)
     except Exception as e:
         st.error(f"An error occurred: {e}")
 
 # [DA6] Company Map Tab
-with tab3:
+if menu == "Company Map":
     st.subheader("Company Headquarters Map")
 
     # State Filter
@@ -127,7 +149,7 @@ with tab3:
         st.error(f"An error occurred: {e}")
 
 # [DA7] Company Comparison Tab
-with tab4:
+if menu == "Company Comparison":
     st.subheader("Company Comparison")
     selected_companies = st.multiselect("Select Companies", options=df['NAME'].unique())
     comparison_df = df[df['NAME'].isin(selected_companies)]
@@ -139,7 +161,7 @@ with tab4:
         st.write("---")
 
 # [DA8] Interactive Insights Tab
-with tab5:
+if menu == "Interactive Insights":
     st.subheader("Interactive Insights")
     metric = st.selectbox("Choose Metric", options=["REVENUES", "PROFIT", "EMPLOYEES"])
     threshold = st.slider(f"Minimum {metric} (In Millions)", min_value=0, max_value=int(df[metric].max()), step=1000)
@@ -152,9 +174,14 @@ with tab5:
         labels={metric: f"{metric.capitalize()} (In Millions)"}
     )
     st.plotly_chart(fig, use_container_width=True)
+    # Display Top 5
+    st.write("### Top 5 Companies")
+    top_5 = filtered_insights.head(5)
+    for _, row in top_5.iterrows():
+        st.write(f"**{row['NAME']}**: ${row[metric]:,.2f} (In Millions)")
 
 # [DA9] Export Data Tab
-with tab6:
+if menu == "Export Data":
     st.subheader("Export Data")
     buffer = io.StringIO()
     df.to_csv(buffer, index=False)
