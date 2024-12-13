@@ -195,12 +195,6 @@ with tab5:
         - [Google Finance](https://www.google.com/finance)
         """)
 
-        # Filter: Companies Containing "Inc"
-        inc_filter = st.checkbox("Show Only Companies Containing 'Inc'")
-        if inc_filter:
-            filtered_insights = filtered_insights[filtered_insights['NAME'].str.contains("Inc", na=False)]
-            st.write(filtered_insights[['NAME', 'REVENUES', 'PROFIT', 'EMPLOYEES']])
-
     else:
         st.write("No companies match the selected criteria. Try adjusting the threshold or metric.")
 
