@@ -146,37 +146,28 @@ with tab3:
     # Colorize By Options
     colorize_by = st.radio("Colorize By", options=["None", "Revenues", "Employees", "Profit"])
 
-    # Determine dot colors based on selected option
-    try:
-        if colorize_by == "Revenues" and "REVENUES" in filtered_df.columns:
-            max_value = filtered_df['REVENUES'].max()
-            min_value = filtered_df['REVENUES'].min()
-            st.write(f"Revenues Range: Min = {min_value}, Max = {max_value}")  # Debug
-            range_value = max_value - min_value if max_value != min_value else 1
-            filtered_df['COLOR'] = filtered_df['REVENUES'].apply(
-                lambda rev: [255, int(255 * (rev - min_value) / range_value), 0]
-            )
-        elif colorize_by == "Employees" and "EMPLOYEES" in filtered_df.columns:
-            max_value = filtered_df['EMPLOYEES'].max()
-            min_value = filtered_df['EMPLOYEES'].min()
-            st.write(f"Employees Range: Min = {min_value}, Max = {max_value}")  # Debug
-            range_value = max_value - min_value if max_value != min_value else 1
-            filtered_df['COLOR'] = filtered_df['EMPLOYEES'].apply(
-                lambda emp: [0, int(255 * (emp - min_value) / range_value), 255]
-            )
-        elif colorize_by == "Profit" and "PROFIT" in filtered_df.columns:
-            max_value = filtered_df['PROFIT'].max()
-            min_value = filtered_df['PROFIT'].min()
-            st.write(f"Profit Range: Min = {min_value}, Max = {max_value}")  # Debug
-            range_value = max_value - min_value if max_value != min_value else 1
-            filtered_df['COLOR'] = filtered_df['PROFIT'].apply(
-                lambda profit: [int(255 * (profit - min_value) / range_value), 0, 255]
-            )
-        else:
-            # Default color (red) when no colorization is selected
-            filtered_df['COLOR'] = [[255, 0, 0] for _ in range(len(filtered_df))]
-    except Exception as e:
-        st.error(f"Error in colorization: {e}")
+    # Display the Benchmark Slider only if a metric is selected
+    benchmark = None
+    if colorize_by == "Revenues" and "REVENUES" in filtered_df.columns:
+        benchmark = st.slider("Set Benchmark for Revenues", min_value=int(filtered_df['REVENUES'].min()),
+                              max_value=int(filtered_df['REVENUES'].max()), value=int(filtered_df['REVENUES'].median()))
+        filtered_df['COLOR'] = filtered_df['REVENUES'].apply(
+            lambda rev: [0, 255, 0] if rev >= benchmark else [255, 0, 0]
+        )
+    elif colorize_by == "Employees" and "EMPLOYEES" in filtered_df.columns:
+        benchmark = st.slider("Set Benchmark for Employees", min_value=int(filtered_df['EMPLOYEES'].min()),
+                              max_value=int(filtered_df['EMPLOYEES'].max()), value=int(filtered_df['EMPLOYEES'].median()))
+        filtered_df['COLOR'] = filtered_df['EMPLOYEES'].apply(
+            lambda emp: [0, 255, 0] if emp >= benchmark else [255, 0, 0]
+        )
+    elif colorize_by == "Profit" and "PROFIT" in filtered_df.columns:
+        benchmark = st.slider("Set Benchmark for Profit", min_value=int(filtered_df['PROFIT'].min()),
+                              max_value=int(filtered_df['PROFIT'].max()), value=int(filtered_df['PROFIT'].median()))
+        filtered_df['COLOR'] = filtered_df['PROFIT'].apply(
+            lambda profit: [0, 255, 0] if profit >= benchmark else [255, 0, 0]
+        )
+    else:
+        # Default color (red) when no colorization is selected
         filtered_df['COLOR'] = [[255, 0, 0] for _ in range(len(filtered_df))]
 
     # Display Map
