@@ -169,7 +169,7 @@ with tab4:
         st.write(f"[Website]({row['WEBSITE']})")
         st.write("---")
 
-# [DA8] Interactive Insights Tab (Financial Investment Advice)
+# [DA8] Interactive Insights Tab with Financial Resources
 with tab5:
     st.subheader("Investment Insights")
 
@@ -190,31 +190,33 @@ with tab5:
         st.write(f"- 📊 The **average {metric.capitalize()}** across filtered companies is **${average_metric:,.2f} (In Millions)**.")
         st.write(f"- 🎯 Suggested Threshold for Top Performers: **${suggested_threshold:,.2f} (In Millions)** (Top {100 - percentile}% percentile).")
 
-        # Investment Opportunities
-        st.write("### Investment Opportunities")
-        top_regions = filtered_insights.groupby('STATE')[metric].sum().sort_values(ascending=False).head(3)
-        top_industries = filtered_insights.groupby('INDUSTRY')[metric].sum().sort_values(ascending=False).head(3)
+        # Financial Resource Links
+        st.write("### Explore More Financial Insights")
+        st.markdown(f"""
+        - [Yahoo Finance - {top_company['NAME']}]({top_company['WEBSITE']})
+        - [Google Finance](https://www.google.com/finance)
+        - [Bloomberg](https://www.bloomberg.com)
+        """)
 
-        st.write(f"📍 **Top Regions for Investment**:")
-        for state, value in top_regions.items():
+        # Top Performing States
+        st.write("### Top Performing States")
+        top_states = filtered_insights.groupby('STATE')[metric].sum().sort_values(ascending=False).head(3)
+        for state, value in top_states.items():
             st.write(f"- **{state}**: ${value:,.2f} (In Millions)")
 
-        st.write(f"🏭 **Top Industries for Investment**:")
-        for industry, value in top_industries.items():
-            st.write(f"- **{industry}**: ${value:,.2f} (In Millions)")
+        # Risk Indicators
+        st.write("### Risk Indicators")
+        loss_states = df[df['PROFIT'] < 0].groupby('STATE').size().sort_values(ascending=False).head(3)
+        if not loss_states.empty:
+            st.write(f"⚠️ **States with Most Loss-Making Companies**:")
+            for state, count in loss_states.items():
+                st.write(f"- **{state}**: {count} companies")
 
-        # Risk Assessment
-        st.write("### Risk Assessment")
-        low_performers = df[df[metric] < average_metric].groupby('STATE').size().sort_values(ascending=False).head(3)
-        st.write(f"⚠️ **Underperforming Regions** (Below Average {metric.capitalize()}):")
-        for state, count in low_performers.items():
-            st.write(f"- **{state}**: {count} companies")
-
-        # Portfolio Insights
-        st.write("### Portfolio Insights")
-        st.write("- Diversify your investments across **regions and industries** to reduce risk.")
-        st.write(f"- Focus on companies above **${suggested_threshold:,.2f}**, as they represent top performers.")
-        st.write("- Avoid over-concentration in regions with consistent underperformance.")
+        # Investment Recommendations
+        st.write("### Investment Recommendations")
+        st.write("- Focus on **states** with high total revenues or profits for potential growth opportunities.")
+        st.write(f"- Avoid over-concentrating investments in states with high numbers of loss-making companies.")
+        st.write(f"- Prioritize companies with {metric.capitalize()} above **${suggested_threshold:,.2f} (In Millions)**.")
 
         # Dynamic Comparison Chart
         comparison_metric = st.selectbox("Choose a Metric for Comparison", options=["PROFIT", "EMPLOYEES", "REVENUES"])
@@ -235,6 +237,7 @@ with tab5:
         st.plotly_chart(comparison_fig, use_container_width=True)
     else:
         st.write("No companies match the selected criteria. Try adjusting the threshold or metric.")
+
 
 # [DA9] Export Data Tab
 with tab6:
