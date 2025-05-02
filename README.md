@@ -2,8 +2,8 @@
 
 A Streamlit web app for visualizing the geographic distribution of Fortune 500 corporate headquarters and uncovering insights into revenue patterns and marketing opportunities.
 
-Link: [Streamlit]([url](https://fortune500analysis.streamlit.app/))
-Dataset: [Kaggle](ttps://www.kaggle.com/datasets/mannmann2/fortune-500-corporate-headquarters)
+Link: [Streamlit](https://fortune500analysis.streamlit.app/)
+Dataset: [Kaggle](https://www.kaggle.com/datasets/mannmann2/fortune-500-corporate-headquarters)
 
 ## Overview
 
